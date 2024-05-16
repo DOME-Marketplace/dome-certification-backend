@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compliance Expiration Reminder</title>
+    <style>
+        /* Custom Styles */
+        :root {
+            --fore-color-primary: white !important;
+            --bg-color-primary: #1976d2 !important;
+            --fore-color-medium: white !important;
+            --bg-color-medium: #2196f3 !important;
+            --fore-color-light: black !important;
+            --bg-color-light: #f3f4fb !important;
+            --text-color-primary: #1976d2 !important;
+            --text-color-medium: #2196f3 !important;
+            --fore-color-secondary: #04ff00 !important;
+            --bg-color-secondary: #1976d2 !important;
+            --border-color-primary: #1976d2 !important;
+            --border-color-medium: #2196f3 !important;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--fore-color-primary);
+            color: var(--fore-color-light);
+        }
+
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            box-sizing: border-box;
+            background-color: var(--bg-color-light);
+            color: var(--fore-color-light);
+        }
+
+        .header {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+
+            box-sizing: border-box;
+            background-color: var(--bg-color-primary);
+            color: var(--fore-color-primary);
+            padding: 5px 20px;
+        }
+
+        h1 {
+            color: var(--text-color-primary);
+            text-align: center;
+        }
+
+        h3 {
+            color: var(--fore-color-primary);
+        }
+
+        p {
+            color: var(--fore-color-light);
+            line-height: 1.6;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: var(--bg-color-medium);
+            color: var(--fore-color-medium);
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 20px;
+            transition: opacity 0.3s ease;
+        }
+
+        .button:hover {
+            opacity: 0.8;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border-color-primary);
+        }
+
+        .footer p {
+            font-size: 12px;
+            color: var(--text-color-medium);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header" style="display: flex; align-items: center; gap: 10px;">
+        <img src="https://dome-marketplace.org/resources/core/images/DOME_Icon_White.png" width="44px" height="44px" />
+        <h2>Certification</h2>
+    </div>
+    <div class="container">
+
+        <h1>Compliance Expiration Reminder</h1>
+        <div style="text-align: center;">
+            <h2>Attention!</h2>
+            <p style="text-align: center;">Your compliance certification is expiring in 2 months.</p>
+            <p>Please take action to renew your compliance certification in a timely manner.</p>
+            <a href="#" class="button">Renew Compliance</a>
+        </div>
+
+
+        <div class="footer">
+            <p>This email was sent from <strong>DOME Certification</strong>. Contact us for any questions or inquiries.
+            </p>
+            <p>© 2024 DOME Certification. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+
+</html>
