@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: dome
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+    networks:
+      - mi-red
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - mi-red
+
+networks:
+  mi-red:
+    driver: bridge
