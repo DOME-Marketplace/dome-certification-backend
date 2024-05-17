@@ -73,7 +73,7 @@ Run Production server
     1. Start the API in PROD server:
 
 ```bash
- mvn spring-boot:run -P PROD
+ mvn spring-boot:run -P prod
 ```
 
 Project URL
