@@ -17,7 +17,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping(value = "/api/v1/user")
 @RequiredArgsConstructor
-@CrossOrigin({ "http://localhost:4200" })
+@CrossOrigin(
+  { "http://localhost:4200", "https://xs86qb08-4200.uks1.devtunnels.ms" }
+)
 public class UserController {
 
   private final UserService userService;

@@ -26,7 +26,9 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Auth")
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin({ "http://localhost:4200" })
+@CrossOrigin(
+  { "http://localhost:4200", "https://xs86qb08-4200.uks1.devtunnels.ms" }
+)
 @RequiredArgsConstructor
 public class AuthController {
 

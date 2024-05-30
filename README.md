@@ -1,10 +1,10 @@
-# DEKRA BACKEND JAVA TEMPLATE
+# DEKRA DOME CERTIFICATION
 
-This projects is a SpringBoot template whith JWT security and Swagger documentation for reuse in new projects
+This projects is a SpringBoot DOME CERTIFICATION whith JWT security and Swagger documentation.
 
 ## Project Description
 
-The DEKRA Backend Java Template offers a comprehensive foundation for Java-based backend development. Built upon the Spring Boot framework, it provides a structured architecture and essential components to expedite project setup. Whether for web applications, APIs, or microservices, this template streamlines the initial development process, ensuring consistency, reliability, and security.
+The DEKRA Backend DOME CERTIFICATION offers a comprehensive foundation for Java-based backend development. Built upon the Spring Boot framework, it provides a structured architecture and essential components to expedite project setup. Whether for web applications, APIs, or microservices, this template streamlines the initial development process, ensuring consistency, reliability, and security.
 
 ## Features
 

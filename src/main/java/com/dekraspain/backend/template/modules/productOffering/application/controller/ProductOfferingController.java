@@ -44,7 +44,9 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/v1/product-offering")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearer-key")
-@CrossOrigin({ "http://localhost:4200" })
+@CrossOrigin(
+  { "http://localhost:4200", "https://xs86qb08-4200.uks1.devtunnels.ms" }
+)
 public class ProductOfferingController {
 
   private final ProductOfferingService productService;
