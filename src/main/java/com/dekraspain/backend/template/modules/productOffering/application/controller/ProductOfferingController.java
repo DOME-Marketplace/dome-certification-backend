@@ -29,7 +29,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -44,9 +43,6 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/v1/product-offering")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearer-key")
-@CrossOrigin(
-  { "http://localhost:4200", "https://xs86qb08-4200.uks1.devtunnels.ms" }
-)
 public class ProductOfferingController {
 
   private final ProductOfferingService productService;

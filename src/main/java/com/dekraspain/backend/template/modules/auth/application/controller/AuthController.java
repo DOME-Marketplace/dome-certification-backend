@@ -15,7 +15,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,9 +25,6 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Auth")
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(
-  { "http://localhost:4200", "https://xs86qb08-4200.uks1.devtunnels.ms" }
-)
 @RequiredArgsConstructor
 public class AuthController {
 
