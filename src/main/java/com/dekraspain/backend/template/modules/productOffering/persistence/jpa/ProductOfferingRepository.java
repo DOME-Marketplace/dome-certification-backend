@@ -1,16 +1,19 @@
 package com.dekraspain.backend.template.modules.productOffering.persistence.jpa;
 
-import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ProductOfferingEntity;
-import jakarta.transaction.Transactional;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ProductOfferingEntity;
+
+import jakarta.transaction.Transactional;
 
 @Repository
 public interface ProductOfferingRepository
@@ -57,4 +60,7 @@ public interface ProductOfferingRepository
     "SELECT p FROM ProductOfferingEntity p WHERE p.user.id = :userId ORDER BY p.request_date DESC"
   )
   List<ProductOfferingEntity> findAllByUserId(UUID userId);
+
+  @Query("SELECT p FROM ProductOfferingEntity p ORDER BY p.request_date DESC")
+  List<ProductOfferingEntity> findAllPO();
 }
