@@ -1,6 +1,7 @@
 package com.dekraspain.backend.template.modules.productOffering.domain.model;
 
 import com.dekraspain.backend.template.shared.customValidators.EnumValidator;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import lombok.AllArgsConstructor;
@@ -16,6 +17,10 @@ public class ProductOfferingStatesDTO {
 
   @EnumValidator(enumClass = ProductOfferingStates.class)
   private ProductOfferingStates status;
+
+  private Date expiration_date;
+
+  private String comments;
 
   private Optional<List<String>> compliances;
 }

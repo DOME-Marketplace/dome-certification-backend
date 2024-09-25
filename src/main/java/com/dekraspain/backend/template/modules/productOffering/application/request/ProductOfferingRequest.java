@@ -87,4 +87,15 @@ public class ProductOfferingRequest {
     message = "ID PO must be between 3 and 40 characters long"
   )
   public String id_PO;
+
+  @NotNull(message = "ID PO cannot be null")
+  @NotBlank(message = "ID PO cannot be blank")
+  @Size(
+    min = 3,
+    max = 40,
+    message = "VAT ID must be between 3 and 40 characters long"
+  )
+  public String VAT_ID;
+
+  public String comments;
 }

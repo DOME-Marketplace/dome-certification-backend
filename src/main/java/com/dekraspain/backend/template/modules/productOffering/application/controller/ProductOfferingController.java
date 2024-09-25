@@ -100,18 +100,41 @@ public class ProductOfferingController {
       )
       .collect(Collectors.toList());
 
-    UserDTO issuerDTO = UserDTO
-      .builder()
-      .id(issuer.getId().toString())
-      .username(issuer.getUsername())
-      .firstname(issuer.getFirstname())
-      .lastname(issuer.getLastname())
-      .address(issuer.getAddress())
-      .country_code(issuer.getCountry_code())
-      .organization_name(issuer.getOrganization_name())
-      .website(issuer.getWebsite())
-      .last_seen(issuer.getLast_seen())
-      .build();
+    // Verificación si issuer es null
+    UserDTO issuerDTO = null;
+    if (issuer != null) {
+      issuerDTO =
+        UserDTO
+          .builder()
+          .id(issuer.getId().toString())
+          .username(issuer.getUsername())
+          .firstname(issuer.getFirstname())
+          .lastname(issuer.getLastname())
+          .address(issuer.getAddress())
+          .country_code(issuer.getCountry_code())
+          .organization_name(issuer.getOrganization_name())
+          .website(issuer.getWebsite())
+          .last_seen(issuer.getLast_seen())
+          .build();
+    }
+
+    UserDTO userDTO = null;
+    if (productOffering.getUser() != null) {
+      userDTO =
+        UserDTO
+          .builder()
+          .id(productOffering.getUser().getId().toString())
+          .username(productOffering.getUser().getUsername())
+          .firstname(productOffering.getUser().getFirstname())
+          .lastname(productOffering.getUser().getLastname())
+          .address(productOffering.getUser().getAddress())
+          .country_code(productOffering.getUser().getCountry_code())
+          .organization_name(productOffering.getUser().getOrganization_name())
+          .website(productOffering.getUser().getWebsite())
+          .last_seen(productOffering.getUser().getLast_seen())
+          .build();
+    }
+    // Verificación si issuer es null
 
     ProductOfferingDTO productOfferingDTO = ProductOfferingDTO
       .builder()
@@ -127,7 +150,10 @@ public class ProductOfferingController {
       .status(productOffering.getStatus())
       .request_date(productOffering.getRequest_date())
       .issue_date(productOffering.getIssue_date())
-      .issuer(issuerDTO)
+      .comments(productOffering.getComments())
+      .VAT_ID(productOffering.getVAT_ID())
+      .issuer(issuerDTO) // Puede ser null sin causar error
+      .user(userDTO) // Puede ser null sin causar error
       .expiration_date(productOffering.getExpiration_date())
       .image(productOffering.getImage())
       .complianceProfiles(complianceProfileDTOs)
@@ -146,6 +172,7 @@ public class ProductOfferingController {
     @RequestPart("ISO_Country_Code") String isoCountryCode,
     @RequestPart("url_organization") String urlOrganization,
     @RequestPart("email_organization") String emailOrganization,
+    @RequestPart("VAT_ID") String vatId,
     @RequestPart("id_PO") String idPo,
     @RequestPart("files") List<MultipartFile> files
   ) {
@@ -159,6 +186,7 @@ public class ProductOfferingController {
         .ISO_Country_Code(isoCountryCode)
         .url_organization(urlOrganization)
         .email_organization(emailOrganization)
+        .VAT_ID(vatId)
         .id_PO(idPo)
         .build();
 
@@ -202,11 +230,11 @@ public class ProductOfferingController {
   @PostMapping("/status-PO/{id}")
   public ResponseEntity<ProductOfferingDTO> validatePO(
     @PathVariable Long id,
-    @RequestBody ProductOfferingStatesDTO status
+    @RequestBody ProductOfferingStatesDTO request
   ) {
     ProductOfferingDTO productOffering = productService.updateStatusProductOffering(
       id,
-      status
+      request
     );
 
     //Send email
@@ -217,9 +245,9 @@ public class ProductOfferingController {
       " " +
       productOffering.getService_version() +
       " is " +
-      status.getStatus();
+      request.getStatus();
 
-    if (status.getStatus().equals(ProductOfferingStates.VALIDATED)) {
+    if (request.getStatus().equals(ProductOfferingStates.VALIDATED)) {
       try {
         emailService.sendEmailWithTemplateNoContext(
           email,
@@ -229,7 +257,7 @@ public class ProductOfferingController {
       } catch (MessagingException e) {}
     }
 
-    if (status.getStatus().equals(ProductOfferingStates.REJECTED)) {
+    if (request.getStatus().equals(ProductOfferingStates.REJECTED)) {
       try {
         emailService.sendEmailWithTemplateNoContext(
           email,

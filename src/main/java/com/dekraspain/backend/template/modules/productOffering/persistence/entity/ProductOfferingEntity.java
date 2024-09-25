@@ -42,10 +42,16 @@ public class ProductOfferingEntity {
   private String ISO_Country_Code;
   private String url_organization;
   private String email_organization;
+  private String VAT_ID;
+  private String comments;
 
   @ManyToOne(targetEntity = UserEntity.class, fetch = FetchType.LAZY)
   @JoinColumn(name = "issuer")
   private UserEntity issuer;
+
+  @ManyToOne(targetEntity = UserEntity.class, fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id")
+  private UserEntity user;
 
   private String image;
 

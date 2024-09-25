@@ -21,7 +21,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -30,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -75,8 +75,9 @@ public class ProductOfferingService {
       .url_organization(request.getUrl_organization())
       .email_organization(request.getEmail_organization())
       .id_PO(request.getId_PO())
+      .user(user)
       .status(ProductOfferingStates.IN_PROGRESS)
-      .issuer(user)
+      .VAT_ID(request.getVAT_ID())
       .request_date(new Date())
       .issue_date(null)
       .expiration_date(null)
@@ -117,20 +118,30 @@ public class ProductOfferingService {
 
   public ProductOfferingDTO updateStatusProductOffering(
     Long id,
-    ProductOfferingStatesDTO status
+    ProductOfferingStatesDTO request
   ) {
+    Authentication authentication = SecurityContextHolder
+      .getContext()
+      .getAuthentication();
+
     ProductOfferingEntity existingProductOffering = getProductOfferingById(id);
-    existingProductOffering.setStatus(status.getStatus());
-    existingProductOffering.setIssue_date(new Date());
+    UserEntity user = (UserEntity) authentication.getPrincipal();
+    existingProductOffering.setStatus(request.getStatus());
 
-    if (status.getStatus() == ProductOfferingStates.VALIDATED) {
-      Calendar calendar = Calendar.getInstance();
-      calendar.setTime(new Date());
-      calendar.add(Calendar.YEAR, 2);
-      Date expirationDate = calendar.getTime();
-      existingProductOffering.setExpiration_date(expirationDate);
+    if (request.getStatus() == ProductOfferingStates.REJECTED) {
+      existingProductOffering.setComments(request.getComments());
+      existingProductOffering.setIssue_date(new Date());
+    }
 
-      Optional<List<String>> compliances = status.getCompliances();
+    if (
+      request.getStatus() == ProductOfferingStates.VALIDATED &&
+      request.getExpiration_date() != null
+    ) {
+      existingProductOffering.setIssue_date(new Date());
+      existingProductOffering.setIssuer(user);
+      existingProductOffering.setExpiration_date(request.getExpiration_date());
+
+      Optional<List<String>> compliances = request.getCompliances();
 
       for (String compliance : compliances.get()) {
         ComplianceEntity complianceEntity = ComplianceEntity
@@ -141,11 +152,46 @@ public class ProductOfferingService {
         complianceRepository.save(complianceEntity);
       }
     }
+
     ProductOfferingEntity updatedProductOffering = productOfferingRepository.save(
       existingProductOffering
     );
 
+    // Verificación si issuer es null
     UserEntity issuer = updatedProductOffering.getIssuer();
+    UserDTO issuerDTO = null;
+    if (issuer != null) {
+      issuerDTO =
+        UserDTO
+          .builder()
+          .id(issuer.getId().toString())
+          .username(issuer.getUsername())
+          .firstname(issuer.getFirstname())
+          .lastname(issuer.getLastname())
+          .country_code(issuer.getCountry_code())
+          .last_seen(issuer.getLast_seen())
+          .address(issuer.getAddress())
+          .organization_name(issuer.getOrganization_name())
+          .website(issuer.getWebsite())
+          .build();
+    }
+
+    UserDTO userDTO = null;
+    if (user != null) {
+      userDTO =
+        UserDTO
+          .builder()
+          .id(user.getId().toString())
+          .username(user.getUsername())
+          .firstname(user.getFirstname())
+          .lastname(user.getLastname())
+          .country_code(user.getCountry_code())
+          .last_seen(user.getLast_seen())
+          .address(user.getAddress())
+          .organization_name(user.getOrganization_name())
+          .website(user.getWebsite())
+          .build();
+    }
 
     List<CompilanceProfileDTO> complianceProfileDTOs = updatedProductOffering
       .getComplianceProfiles()
@@ -160,8 +206,6 @@ public class ProductOfferingService {
       )
       .collect(Collectors.toList());
 
-    // List<ComplianceEntity> compliances = updatedProductOffering.getCompliances();
-
     List<ComplianceNamesDTO> compliances = updatedProductOffering
       .getCompliances()
       .stream()
@@ -173,19 +217,6 @@ public class ProductOfferingService {
           .build()
       )
       .collect(Collectors.toList());
-
-    UserDTO issuerDTO = UserDTO
-      .builder()
-      .id(issuer.getId().toString())
-      .username(issuer.getUsername())
-      .firstname(issuer.getFirstname())
-      .lastname(issuer.getLastname())
-      .country_code(issuer.getCountry_code())
-      .last_seen(issuer.getLast_seen())
-      .address(issuer.getAddress())
-      .organization_name(issuer.getOrganization_name())
-      .website(issuer.getWebsite())
-      .build();
 
     return ProductOfferingDTO
       .builder()
@@ -201,7 +232,10 @@ public class ProductOfferingService {
       .status(updatedProductOffering.getStatus())
       .request_date(updatedProductOffering.getRequest_date())
       .issue_date(updatedProductOffering.getIssue_date())
-      .issuer(issuerDTO)
+      .user(userDTO)
+      .issuer(issuerDTO) // Puede ser null sin causar error
+      .comments(updatedProductOffering.getComments())
+      .VAT_ID(updatedProductOffering.getVAT_ID())
       .expiration_date(updatedProductOffering.getExpiration_date())
       .image(updatedProductOffering.getImage())
       .complianceProfiles(complianceProfileDTOs)
@@ -220,22 +254,13 @@ public class ProductOfferingService {
 
   public List<ProductOfferingDTO> getAllProductOffering() {
     List<ProductOfferingDTO> productOfferings = productOfferingRepository
-      .findAll()
+      .findAll(Sort.by(Sort.Direction.DESC, "request_date"))
       .stream()
-      .map(productOffering ->
-        ProductOfferingDTO
-          .builder()
-          .id(productOffering.getId())
-          .id_PO(productOffering.getId_PO())
-          .service_name(productOffering.getService_name())
-          .service_version(productOffering.getService_version())
-          .name_organization(productOffering.getName_organization())
-          .address_organization(productOffering.getAddress_organization())
-          .ISO_Country_Code(productOffering.getISO_Country_Code())
-          .url_organization(productOffering.getUrl_organization())
-          .email_organization(productOffering.getEmail_organization())
-          .status(productOffering.getStatus())
-          .issuer(
+      .map(productOffering -> {
+        // Verificación si issuer es null
+        UserDTO issuerDTO = null;
+        if (productOffering.getIssuer() != null) {
+          issuerDTO =
             UserDTO
               .builder()
               .id(productOffering.getIssuer().getId().toString())
@@ -249,8 +274,43 @@ public class ProductOfferingService {
                 productOffering.getIssuer().getOrganization_name()
               )
               .website(productOffering.getIssuer().getWebsite())
-              .build()
-          )
+              .build();
+        }
+        UserDTO userDTO = null;
+        if (productOffering.getUser() != null) {
+          userDTO =
+            UserDTO
+              .builder()
+              .id(productOffering.getUser().getId().toString())
+              .username(productOffering.getUser().getUsername())
+              .firstname(productOffering.getUser().getFirstname())
+              .lastname(productOffering.getUser().getLastname())
+              .country_code(productOffering.getUser().getCountry_code())
+              .last_seen(productOffering.getUser().getLast_seen())
+              .address(productOffering.getUser().getAddress())
+              .organization_name(
+                productOffering.getUser().getOrganization_name()
+              )
+              .website(productOffering.getUser().getWebsite())
+              .build();
+        }
+
+        return ProductOfferingDTO
+          .builder()
+          .id(productOffering.getId())
+          .id_PO(productOffering.getId_PO())
+          .service_name(productOffering.getService_name())
+          .service_version(productOffering.getService_version())
+          .name_organization(productOffering.getName_organization())
+          .address_organization(productOffering.getAddress_organization())
+          .ISO_Country_Code(productOffering.getISO_Country_Code())
+          .url_organization(productOffering.getUrl_organization())
+          .email_organization(productOffering.getEmail_organization())
+          .VAT_ID(productOffering.getVAT_ID())
+          .comments(productOffering.getComments())
+          .status(productOffering.getStatus())
+          .issuer(issuerDTO) // Puede ser null sin causar error
+          .user(userDTO)
           .complianceProfiles(
             productOffering
               .getComplianceProfiles()
@@ -269,9 +329,6 @@ public class ProductOfferingService {
           .expiration_date(productOffering.getExpiration_date())
           .request_date(productOffering.getRequest_date())
           .image(productOffering.getImage())
-          .request_date(productOffering.getRequest_date())
-          .issue_date(productOffering.getIssue_date())
-          .expiration_date(productOffering.getExpiration_date())
           .compliances(
             productOffering
               .getCompliances()
@@ -285,8 +342,8 @@ public class ProductOfferingService {
               )
               .collect(Collectors.toList())
           )
-          .build()
-      )
+          .build();
+      })
       .collect(Collectors.toList());
 
     return productOfferings;
@@ -297,14 +354,9 @@ public class ProductOfferingService {
       .getContext()
       .getAuthentication();
 
-    // if (authentication == null) {
-    //   return;
-    // }
-
     UserEntity user = (UserEntity) authentication.getPrincipal();
-
     List<ProductOfferingDTO> productOfferings = productOfferingRepository
-      .findAllByIssuerId(user.id)
+      .findAllByUserId(user.id)
       .stream()
       .map(productOffering ->
         ProductOfferingDTO
@@ -318,22 +370,44 @@ public class ProductOfferingService {
           .ISO_Country_Code(productOffering.getISO_Country_Code())
           .url_organization(productOffering.getUrl_organization())
           .email_organization(productOffering.getEmail_organization())
+          .VAT_ID(productOffering.getVAT_ID())
+          .comments(productOffering.getComments())
           .status(productOffering.getStatus())
           .issuer(
-            UserDTO
-              .builder()
-              .id(productOffering.getIssuer().getId().toString())
-              .username(productOffering.getIssuer().getUsername())
-              .firstname(productOffering.getIssuer().getFirstname())
-              .lastname(productOffering.getIssuer().getLastname())
-              .country_code(productOffering.getIssuer().getCountry_code())
-              .last_seen(productOffering.getIssuer().getLast_seen())
-              .address(productOffering.getIssuer().getAddress())
-              .organization_name(
-                productOffering.getIssuer().getOrganization_name()
-              )
-              .website(productOffering.getIssuer().getWebsite())
-              .build()
+            productOffering.getIssuer() != null
+              ? UserDTO
+                .builder()
+                .id(productOffering.getIssuer().getId().toString())
+                .username(productOffering.getIssuer().getUsername())
+                .firstname(productOffering.getIssuer().getFirstname())
+                .lastname(productOffering.getIssuer().getLastname())
+                .country_code(productOffering.getIssuer().getCountry_code())
+                .last_seen(productOffering.getIssuer().getLast_seen())
+                .address(productOffering.getIssuer().getAddress())
+                .organization_name(
+                  productOffering.getIssuer().getOrganization_name()
+                )
+                .website(productOffering.getIssuer().getWebsite())
+                .build()
+              : null // Si el issuer es null, se asigna null
+          )
+          .user(
+            productOffering.getUser() != null
+              ? UserDTO
+                .builder()
+                .id(productOffering.getUser().getId().toString())
+                .username(productOffering.getUser().getUsername())
+                .firstname(productOffering.getUser().getFirstname())
+                .lastname(productOffering.getUser().getLastname())
+                .country_code(productOffering.getUser().getCountry_code())
+                .last_seen(productOffering.getUser().getLast_seen())
+                .address(productOffering.getUser().getAddress())
+                .organization_name(
+                  productOffering.getUser().getOrganization_name()
+                )
+                .website(productOffering.getUser().getWebsite())
+                .build()
+              : null // Si el user es null, se asigna null
           )
           .complianceProfiles(
             productOffering
@@ -353,9 +427,6 @@ public class ProductOfferingService {
           .expiration_date(productOffering.getExpiration_date())
           .request_date(productOffering.getRequest_date())
           .image(productOffering.getImage())
-          .request_date(productOffering.getRequest_date())
-          .issue_date(productOffering.getIssue_date())
-          .expiration_date(productOffering.getExpiration_date())
           .compliances(
             productOffering
               .getCompliances()

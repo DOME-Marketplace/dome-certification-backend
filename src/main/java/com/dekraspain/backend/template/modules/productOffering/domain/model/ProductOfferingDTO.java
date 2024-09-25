@@ -25,7 +25,10 @@ public class ProductOfferingDTO {
   public String ISO_Country_Code;
   public String url_organization;
   public String email_organization;
+  public String VAT_ID;
+  public String comments;
   public UserDTO issuer;
+  public UserDTO user;
   public String image;
   public List<ComplianceNamesDTO> compliances;
 

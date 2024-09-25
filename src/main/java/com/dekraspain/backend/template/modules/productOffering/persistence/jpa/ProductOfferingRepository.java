@@ -52,4 +52,9 @@ public interface ProductOfferingRepository
   // Consulta personalizada para filtrar por el id de issuer
   @Query("SELECT p FROM ProductOfferingEntity p WHERE p.issuer.id = :issuerId")
   List<ProductOfferingEntity> findAllByIssuerId(UUID issuerId);
+
+  @Query(
+    "SELECT p FROM ProductOfferingEntity p WHERE p.user.id = :userId ORDER BY p.request_date DESC"
+  )
+  List<ProductOfferingEntity> findAllByUserId(UUID userId);
 }

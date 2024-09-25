@@ -155,6 +155,9 @@
     <profiles>
         <profile>
             <id>dev</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
 
             <properties>
                 <build.profile.id>dev</build.profile.id>
@@ -198,9 +201,7 @@
         </profile>
         <profile>
             <id>prod</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
+
             <properties>
                 <build.profile.id>prod</build.profile.id>
                 <profileActive>prod</profileActive>
