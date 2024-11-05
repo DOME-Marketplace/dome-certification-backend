@@ -11,6 +11,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,13 @@ public class JwtService {
 
   @Value("${jwt.secret.key}")
   private String secretKey;
+
+  private final long expirationTime = 86400000;
+  private final String clientId = "did:key:12312123123123";
+  private final String redirectUri =
+    "https://dome-certification.dome-marketplace-sbx.org/auth/login";
+  private final String responseType = "code";
+  private final String scope = "openid learcredential";
 
   public String getToken(UserEntity user) {
     return getToken(new HashMap<>(), user);
@@ -36,6 +44,24 @@ public class JwtService {
       .setSubject(user.getId().toString())
       .setIssuedAt(iat.getTime())
       .setExpiration(exp.getTime())
+      .signWith(getKey(), SignatureAlgorithm.HS256)
+      .compact();
+  }
+
+  // Nuevo método para generar un token que incluya parámetros adicionales
+  public String generateOauthToken() {
+    Claims claims = Jwts.claims();
+    claims.put("response_type", responseType);
+    claims.put("client_id", clientId);
+    claims.put("redirect_uri", redirectUri);
+    claims.put("scope", scope);
+    claims.put("state", UUID.randomUUID().toString());
+
+    return Jwts
+      .builder()
+      .setClaims(claims)
+      .setIssuedAt(new Date(System.currentTimeMillis()))
+      .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
       .signWith(getKey(), SignatureAlgorithm.HS256)
       .compact();
   }

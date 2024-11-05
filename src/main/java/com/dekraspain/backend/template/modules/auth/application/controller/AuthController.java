@@ -5,6 +5,7 @@ import com.dekraspain.backend.template.modules.auth.application.request.Register
 import com.dekraspain.backend.template.modules.auth.application.response.AuthResponse;
 import com.dekraspain.backend.template.modules.auth.domain.service.AuthService;
 import com.dekraspain.backend.template.modules.user.domain.service.UserService;
+import com.dekraspain.backend.template.spring.Jwt.JwtService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -16,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,6 +32,7 @@ public class AuthController {
 
   private final AuthService authService;
   private final UserService userService;
+  private final JwtService jwtService;
 
   @Operation(summary = "Login")
   @PostMapping(value = "login")
@@ -77,5 +80,11 @@ public class AuthController {
       });
 
     return errors;
+  }
+
+  @Operation(summary = "oauth-token")
+  @GetMapping(value = "oauth-token")
+  public String generateOauthToken() {
+    return jwtService.generateOauthToken();
   }
 }
