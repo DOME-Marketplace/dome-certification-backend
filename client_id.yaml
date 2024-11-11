@@ -1,0 +1,13 @@
+- clientId: "did:key:zDnaehmkEhoybLgRkVbKpAv47Vu81Rw5TmLUA5PrRKuWSbhxn"
+  url: "https://dome-certification.dome-marketplace-sbx.org"
+  redirectUris:
+    ["https://dome-certification.dome-marketplace-sbx.org/auth/vc/callback"]
+  scopes: ["openid_learcredential"]
+  clientAuthenticationMethods: ["client_secret_jwt"]
+  authorizationGrantTypes: ["authorization_code"]
+  postLogoutRedirectUris:
+    ["https://dome-certification.dome-marketplace-sbx.org/"]
+  requireAuthorizationConsent: false
+  requireProofKey: false
+  jwkSetUrl: ""
+  tokenEndpointAuthenticationSigningAlgorithm: "ES256"

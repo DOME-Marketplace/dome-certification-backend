@@ -6,12 +6,21 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.Key;
+import java.security.KeyFactory;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.interfaces.ECPrivateKey;
+import java.security.interfaces.ECPublicKey;
+import java.security.spec.ECGenParameterSpec;
+import java.security.spec.ECParameterSpec;
+import java.security.spec.ECPrivateKeySpec;
+import java.util.Base64;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 import java.util.function.Function;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -22,12 +31,31 @@ public class JwtService {
   @Value("${jwt.secret.key}")
   private String secretKey;
 
+  @Value("${jwt.private.key.d}")
+  private String d;
+
+  @Value("${jwt.private.key.x}")
+  private String x;
+
+  @Value("${jwt.private.key.y}")
+  private String y;
+
+  @Value("${jwt.private.client-id}")
+  private String clientId;
+
+  @Value("${jwt.private.redirect-uri}")
+  private String redirectUri;
+
+  @Value("${jwt.private.response-type}")
+  private String responseType;
+
+  @Value("${jwt.private.scope}")
+  private String scope;
+
+  @Value("${jwt.private.aud}")
+  private String aud;
+
   private final long expirationTime = 86400000;
-  private final String clientId = "did:key:12312123123123";
-  private final String redirectUri =
-    "https://dome-certification.dome-marketplace-sbx.org/auth/login";
-  private final String responseType = "code";
-  private final String scope = "openid learcredential";
 
   public String getToken(UserEntity user) {
     return getToken(new HashMap<>(), user);
@@ -50,25 +78,61 @@ public class JwtService {
 
   // Nuevo método para generar un token que incluya parámetros adicionales
   public String generateOauthToken() {
-    Claims claims = Jwts.claims();
-    claims.put("response_type", responseType);
-    claims.put("client_id", clientId);
-    claims.put("redirect_uri", redirectUri);
-    claims.put("scope", scope);
-    claims.put("state", UUID.randomUUID().toString());
+    try {
+      Claims claims = Jwts.claims();
+      claims.put("aud", aud);
+      claims.put("iss", clientId);
+      claims.put("response_type", responseType);
+      claims.put("client_id", clientId);
+      claims.put("redirect_uri", redirectUri);
+      claims.put("scope", scope);
 
-    return Jwts
-      .builder()
-      .setClaims(claims)
-      .setIssuedAt(new Date(System.currentTimeMillis()))
-      .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
-      .signWith(getKey(), SignatureAlgorithm.HS256)
-      .compact();
+      return Jwts
+        .builder()
+        .setClaims(claims)
+        .setIssuedAt(new Date(System.currentTimeMillis()))
+        .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
+        .signWith(loadPrivateKey(), SignatureAlgorithm.ES256)
+        .compact();
+    } catch (Exception e) {
+      throw new RuntimeException("Error generating OAuth token", e);
+    }
   }
 
   private Key getKey() {
     byte[] keyBytes = Decoders.BASE64.decode(secretKey);
     return Keys.hmacShaKeyFor(keyBytes);
+  }
+
+  public ECPrivateKey loadPrivateKey() throws Exception {
+    // Decodificar las coordenadas de Base64
+    byte[] dBytes = Base64.getUrlDecoder().decode(d);
+    // byte[] xBytes = Base64.getUrlDecoder().decode(x);
+    // byte[] yBytes = Base64.getUrlDecoder().decode(y);
+
+    // Crear la clave privada EC
+    ECPrivateKeySpec privateKeySpec = new ECPrivateKeySpec(
+      new java.math.BigInteger(1, dBytes),
+      getECParameterSpec()
+    );
+    KeyFactory keyFactory = KeyFactory.getInstance("EC");
+    ECPrivateKey privateKey = (ECPrivateKey) keyFactory.generatePrivate(
+      privateKeySpec
+    );
+
+    return privateKey;
+  }
+
+  // Método para obtener el ECParameterSpec (específica de P-256)
+  private ECParameterSpec getECParameterSpec()
+    throws NoSuchAlgorithmException, InvalidAlgorithmParameterException {
+    // Usar ECGenParameterSpec para especificar la curva P-256
+    ECGenParameterSpec ecSpec = new ECGenParameterSpec("secp256r1"); // "secp256r1" es equivalente a P-256
+    KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC");
+    keyPairGenerator.initialize(ecSpec);
+    ECParameterSpec ecParams =
+      ((ECPublicKey) keyPairGenerator.genKeyPair().getPublic()).getParams();
+    return ecParams;
   }
 
   public String getUserIdFromToken(String token) {
