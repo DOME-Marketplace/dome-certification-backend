@@ -1,6 +1,8 @@
 package com.dekraspain.backend.template.spring.Jwt;
 
 import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -151,6 +153,32 @@ public class JwtService {
       .build()
       .parseClaimsJws(token)
       .getBody();
+  }
+
+  // Método para decodificar un JWT sin verificar la firma
+  @SuppressWarnings("unchecked")
+  public Map<String, Object> decodeJwt(String jwt) {
+    try {
+      // Divide el JWT en las tres partes: encabezado, payload y firma
+      String[] parts = jwt.split("\\.");
+      if (parts.length != 3) {
+        throw new IllegalArgumentException("Invalid JWT format");
+      }
+
+      // El payload (claims) es la segunda parte, en Base64Url
+      String encodedPayload = parts[1];
+
+      // Decodificar el payload de Base64Url a String
+      String decodedPayload = new String(
+        Base64.getUrlDecoder().decode(encodedPayload)
+      );
+
+      // Usar ObjectMapper para convertir el payload decodificado en un objeto Map
+      ObjectMapper objectMapper = new ObjectMapper();
+      return objectMapper.readValue(decodedPayload, Map.class);
+    } catch (JsonProcessingException | IllegalArgumentException e) {
+      throw new RuntimeException("Error al decodificar el JWT", e);
+    }
   }
 
   public <T> T getClaim(String token, Function<Claims, T> claimsResolver) {
