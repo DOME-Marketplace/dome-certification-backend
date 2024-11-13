@@ -36,25 +36,25 @@ public class JwtService {
   @Value("${jwt.private.key.d}")
   private String d;
 
-  @Value("${jwt.private.key.x}")
+  @Value("${jwt.public.key.x}")
   private String x;
 
-  @Value("${jwt.private.key.y}")
+  @Value("${jwt.public.key.y}")
   private String y;
 
-  @Value("${jwt.private.client-id}")
+  @Value("${jwt.oauth.client-id}")
   private String clientId;
 
-  @Value("${jwt.private.redirect-uri}")
+  @Value("${jwt.oauth.redirect-uri}")
   private String redirectUri;
 
-  @Value("${jwt.private.response-type}")
+  @Value("${jwt.oauth.response-type}")
   private String responseType;
 
-  @Value("${jwt.private.scope}")
+  @Value("${jwt.oauth.scope}")
   private String scope;
 
-  @Value("${jwt.private.aud}")
+  @Value("${jwt.oauth.aud}")
   private String aud;
 
   private final long expirationTime = 86400000;
