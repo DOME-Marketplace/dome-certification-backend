@@ -1,18 +1,5 @@
 package com.dekraspain.backend.template.modules.auth.application.controller;
 
-import com.dekraspain.backend.template.modules.auth.application.request.LoginRequest;
-import com.dekraspain.backend.template.modules.auth.application.request.RegisterRequest;
-import com.dekraspain.backend.template.modules.auth.application.response.AuthResponse;
-import com.dekraspain.backend.template.modules.auth.domain.service.AuthService;
-import com.dekraspain.backend.template.modules.user.domain.service.UserService;
-import com.dekraspain.backend.template.spring.Jwt.JwtService;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jws;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyFactory;
 import java.security.KeyPairGenerator;
@@ -26,7 +13,8 @@ import java.security.spec.ECPublicKeySpec;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -40,11 +28,33 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
+import com.dekraspain.backend.template.modules.auth.application.request.LoginRequest;
+import com.dekraspain.backend.template.modules.auth.application.request.RegisterRequest;
+import com.dekraspain.backend.template.modules.auth.application.response.AuthResponse;
+import com.dekraspain.backend.template.modules.auth.domain.service.AuthService;
+import com.dekraspain.backend.template.modules.user.domain.service.UserService;
+import com.dekraspain.backend.template.spring.Jwt.JwtService;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
 @Tag(name = "Auth")
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthController {
+
+  @Value("${jwt.public.key.x}")
+  private String x;
+
+  @Value("${jwt.public.key.y}")
+  private String y;
 
   private final AuthService authService;
   private final UserService userService;
@@ -155,8 +165,7 @@ public class AuthController {
     String jsonResponse = restTemplate.getForObject(didUrl, String.class);
 
     // Extraemos las coordenadas x e y de la respuesta JSON
-    String x = "AafPhf-qT_gPc7yvtCd6jSAGUedUalQAFRQBv3fuaUM";
-    String y = "modVruGC6Le8PiD2Bi5vTsPJFoytARsMYTac56XJwz0";
+
     // String x = extractJsonValue(jsonResponse, "x");
     // String y = extractJsonValue(jsonResponse, "y");
 
@@ -179,12 +188,6 @@ public class AuthController {
     );
 
     return publicKey;
-  }
-
-  private String extractJsonValue(String json, String key) {
-    int startIndex = json.indexOf(key + "\":\"") + (key.length() + 3);
-    int endIndex = json.indexOf("\"", startIndex);
-    return json.substring(startIndex, endIndex);
   }
 
   private ECParameterSpec getECParameterSpec()

@@ -35,7 +35,6 @@ import com.dekraspain.backend.template.modules.user.domain.model.UserDTO;
 import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
 import com.dekraspain.backend.template.shared.email.service.EmailService;
 
-import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -516,7 +515,7 @@ public class ProductOfferingService {
           "Expiration email sent flag updated for product offering with id {}",
           id
         );
-      } catch (MessagingException e) {
+      } catch (Exception e) {
         logger.error(
           "Error sending expiration warning email to {}: {}",
           email,
@@ -559,7 +558,7 @@ public class ProductOfferingService {
           "Expiration warning email sent flag updated for product offering with id {}",
           id
         );
-      } catch (MessagingException e) {
+      } catch (Exception e) {
         logger.error(
           "Error sending expiration warning email to {}: {}",
           email,

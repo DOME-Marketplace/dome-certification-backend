@@ -12,7 +12,6 @@ import org.thymeleaf.context.Context;
 import com.dekraspain.backend.template.shared.email.DTO.SendEmailDTO;
 import com.dekraspain.backend.template.shared.email.service.EmailService;
 
-import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;
 
 @RestController
@@ -38,7 +37,7 @@ public class EmailController {
         context
       );
       return ResponseEntity.ok("Email sent successfull.");
-    } catch (MessagingException e) {
+    } catch (Exception e) {
       return ResponseEntity
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
         .body("Error sending email.");

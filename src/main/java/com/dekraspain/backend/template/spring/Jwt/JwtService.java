@@ -23,6 +23,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -35,12 +36,6 @@ public class JwtService {
 
   @Value("${jwt.private.key.d}")
   private String d;
-
-  @Value("${jwt.public.key.x}")
-  private String x;
-
-  @Value("${jwt.public.key.y}")
-  private String y;
 
   @Value("${jwt.oauth.client-id}")
   private String clientId;
@@ -82,12 +77,10 @@ public class JwtService {
   public String generateOauthToken() {
     try {
       Claims claims = Jwts.claims();
-      claims.put("aud", aud);
       claims.put("iss", clientId);
-      claims.put("response_type", responseType);
-      claims.put("client_id", clientId);
-      claims.put("redirect_uri", redirectUri);
-      claims.put("scope", scope);
+      claims.put("sub", clientId);
+      claims.put("aud", aud);
+      claims.put("jti", UUID.randomUUID().toString());
 
       return Jwts
         .builder()

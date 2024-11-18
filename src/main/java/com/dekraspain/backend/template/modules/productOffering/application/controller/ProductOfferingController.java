@@ -1,5 +1,26 @@
 package com.dekraspain.backend.template.modules.productOffering.application.controller;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.dekraspain.backend.template.modules.productOffering.application.request.ProductOfferingRequest;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.CompilanceProfileDTO;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ComplianceNamesDTO;
@@ -14,30 +35,13 @@ import com.dekraspain.backend.template.modules.user.domain.model.UserDTO;
 import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
 import com.dekraspain.backend.template.shared.customResponses.ApiResponse;
 import com.dekraspain.backend.template.shared.email.service.EmailService;
+
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.mail.MessagingException;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Tag(name = "product-offering")
 @RestController
 @RequestMapping("/api/v1/product-offering")
@@ -192,8 +196,7 @@ public class ProductOfferingController {
 
       productService.createProductOffering(request, files);
 
-      //Send email
-
+      // Send email
       String email = emailOrganization;
       String subject =
         "Compliance of " + serviceName + " " + serviceVersion + " created";
@@ -204,7 +207,10 @@ public class ProductOfferingController {
           subject,
           "email-in_progress"
         );
-      } catch (MessagingException e) {}
+      } catch (Exception e) {
+        // Log the error but don't propagate it
+        log.warn("Error sending email to: {}", emailOrganization, e);
+      }
 
       return ResponseEntity
         .status(HttpStatus.CREATED)
@@ -224,6 +230,17 @@ public class ProductOfferingController {
             "Error creating product offering"
           )
         );
+    } catch (Exception e) {
+      // Catch any other unexpected exceptions and log them
+      log.error("Unexpected error occurred", e);
+      return ResponseEntity
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .body(
+          new ApiResponse<>(
+            HttpStatus.INTERNAL_SERVER_ERROR.value(),
+            "Unexpected error"
+          )
+        );
     }
   }
 
@@ -237,7 +254,7 @@ public class ProductOfferingController {
       request
     );
 
-    //Send email
+    // Send email
     String email = productOffering.email_organization;
     String subject =
       "Compliance of " +
@@ -247,6 +264,7 @@ public class ProductOfferingController {
       " is " +
       request.getStatus();
 
+    // Enviar correo si el estado es VALIDADO
     if (request.getStatus().equals(ProductOfferingStates.VALIDATED)) {
       try {
         emailService.sendEmailWithTemplateNoContext(
@@ -254,9 +272,13 @@ public class ProductOfferingController {
           subject,
           "email-validated"
         );
-      } catch (MessagingException e) {}
+      } catch (Exception e) {
+        // Log the error but don't propagate it
+        log.warn("Error sending email for validated status to: {}", email, e);
+      }
     }
 
+    // Enviar correo si el estado es RECHAZADO
     if (request.getStatus().equals(ProductOfferingStates.REJECTED)) {
       try {
         emailService.sendEmailWithTemplateNoContext(
@@ -264,10 +286,59 @@ public class ProductOfferingController {
           subject,
           "email-rejected"
         );
-      } catch (MessagingException e) {}
+      } catch (Exception e) {
+        // Log the error but don't propagate it
+        log.warn("Error sending email for rejected status to: {}", email, e);
+      }
     }
 
     return ResponseEntity.ok(productOffering);
+  }
+
+  @PostMapping("/resend-email/{id}")
+  public ResponseEntity<String> resendEmail(@PathVariable Long id) {
+    try {
+      // Obtener la entidad ProductOffering mediante el id
+      ProductOfferingEntity productOffering = productService.getProductOfferingById(
+        id
+      );
+
+      if (productOffering == null) {
+        return ResponseEntity
+          .status(HttpStatus.NOT_FOUND)
+          .body("Product Offering not found");
+      }
+
+      // Datos para el correo
+      String email = productOffering.getEmail_organization();
+      String subject =
+        "Compliance of " +
+        productOffering.getService_name() +
+        " " +
+        productOffering.getService_version();
+
+      // Enviar correo de validación
+      try {
+        emailService.sendEmailWithTemplateNoContext(
+          email,
+          subject,
+          "email-validated"
+        );
+        log.info("Email sent to: {}", email);
+      } catch (Exception e) {
+        log.warn("Error sending email to: {}", email, e);
+        return ResponseEntity
+          .status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body("Error sending email");
+      }
+
+      return ResponseEntity.ok("Email resent successfully");
+    } catch (Exception e) {
+      log.error("Error processing email resend", e);
+      return ResponseEntity
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .body("Error processing email resend");
+    }
   }
 
   @GetMapping("/compliance-profiles/{productOfferingId}")
