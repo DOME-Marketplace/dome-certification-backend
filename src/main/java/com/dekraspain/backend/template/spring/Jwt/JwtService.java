@@ -74,16 +74,54 @@ public class JwtService {
   }
 
   // Nuevo método para generar un token que incluya parámetros adicionales
-  public String generateOauthToken() {
+  public String generateRequestToken() {
     try {
       Claims claims = Jwts.claims();
       claims.put("iss", clientId);
+      claims.put("aud", aud);
+      claims.put("response_type", "code");
+      claims.put("client_id", clientId);
+      claims.put(
+        "redirect_uri",
+        "https://dome-certification.dome-marketplace-sbx.org/auth/login"
+      );
+      claims.put("scope", "openid learcredential");
+
+      // Crear los parámetros del header
+      Map<String, Object> headerParams = new HashMap<>();
+      headerParams.put("typ", "JWT");
+      headerParams.put("kid", clientId);
+
+      return Jwts
+        .builder()
+        .setHeaderParams(headerParams)
+        .setClaims(claims)
+        .setIssuedAt(new Date(System.currentTimeMillis()))
+        .signWith(loadPrivateKey(), SignatureAlgorithm.ES256)
+        .compact();
+    } catch (Exception e) {
+      throw new RuntimeException("Error generating OAuth token", e);
+    }
+  }
+
+  public String generateClientAssertionToken() {
+    try {
+      Claims claims = Jwts.claims();
+      claims.put("iss", clientId);
+
+      //supuestamente es el did del empleado de dentro de la
       claims.put("sub", clientId);
       claims.put("aud", aud);
       claims.put("jti", UUID.randomUUID().toString());
 
+      // Crear los parámetros del header
+      Map<String, Object> headerParams = new HashMap<>();
+      headerParams.put("typ", "JWT");
+      headerParams.put("kid", clientId);
+
       return Jwts
         .builder()
+        .setHeaderParams(headerParams)
         .setClaims(claims)
         .setIssuedAt(new Date(System.currentTimeMillis()))
         .setExpiration(new Date(System.currentTimeMillis() + expirationTime))

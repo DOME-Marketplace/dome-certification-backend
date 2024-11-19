@@ -1,5 +1,18 @@
 package com.dekraspain.backend.template.modules.auth.application.controller;
 
+import com.dekraspain.backend.template.modules.auth.application.request.LoginRequest;
+import com.dekraspain.backend.template.modules.auth.application.request.RegisterRequest;
+import com.dekraspain.backend.template.modules.auth.application.response.AuthResponse;
+import com.dekraspain.backend.template.modules.auth.domain.service.AuthService;
+import com.dekraspain.backend.template.modules.user.domain.service.UserService;
+import com.dekraspain.backend.template.spring.Jwt.JwtService;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyFactory;
 import java.security.KeyPairGenerator;
@@ -13,7 +26,7 @@ import java.security.spec.ECPublicKeySpec;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
-
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,22 +40,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
-
-import com.dekraspain.backend.template.modules.auth.application.request.LoginRequest;
-import com.dekraspain.backend.template.modules.auth.application.request.RegisterRequest;
-import com.dekraspain.backend.template.modules.auth.application.response.AuthResponse;
-import com.dekraspain.backend.template.modules.auth.domain.service.AuthService;
-import com.dekraspain.backend.template.modules.user.domain.service.UserService;
-import com.dekraspain.backend.template.spring.Jwt.JwtService;
-
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jws;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 
 @Tag(name = "Auth")
 @RestController
@@ -110,8 +107,8 @@ public class AuthController {
 
   @Operation(summary = "oauth-token")
   @GetMapping(value = "oauth-token")
-  public String generateOauthToken() {
-    return jwtService.generateOauthToken();
+  public String generateRequestToken() {
+    return jwtService.generateRequestToken();
   }
 
   @PostMapping("/verify")

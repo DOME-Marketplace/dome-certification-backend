@@ -80,6 +80,6 @@ Project URL
 
     1. The server starts automatically on http://localhost:8080/
 
-podman build -t noeliaguedek/dome-compliance-backend:sbx-1.0.6 .
+podman build -t noeliaguedek/dome-compliance-backend:sbx-1.0.7 .
 
-podman push noeliaguedek/dome-compliance-backend:sbx-1.0.6
+podman push noeliaguedek/dome-compliance-backend:sbx-1.0.7
