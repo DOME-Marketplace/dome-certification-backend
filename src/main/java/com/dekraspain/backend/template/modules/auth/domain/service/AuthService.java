@@ -74,12 +74,6 @@ public class AuthService {
 
     UserEntity userUpdated = userService.updateDidKey(user.getId(), didkey);
 
-    // Autenticación del usuario
-    IdAuthenticationToken authenticationToken = new IdAuthenticationToken(
-      didkey
-    );
-    authenticationManager.authenticate(authenticationToken);
-
     // Generación del token JWT
     String token = jwtService.getToken(userUpdated);
 
