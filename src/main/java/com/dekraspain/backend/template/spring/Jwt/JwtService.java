@@ -1,9 +1,12 @@
 package com.dekraspain.backend.template.spring.Jwt;
 
+import com.dekraspain.backend.template.modules.auth.application.request.KeysContainer;
+import com.dekraspain.backend.template.modules.auth.application.request.VerifiableCredentialPayload;
 import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
@@ -13,11 +16,14 @@ import java.security.Key;
 import java.security.KeyFactory;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.ECGenParameterSpec;
 import java.security.spec.ECParameterSpec;
+import java.security.spec.ECPoint;
 import java.security.spec.ECPrivateKeySpec;
+import java.security.spec.ECPublicKeySpec;
 import java.util.Base64;
 import java.util.Calendar;
 import java.util.Date;
@@ -25,9 +31,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
+@Slf4j
 @Service
 public class JwtService {
 
@@ -40,22 +49,43 @@ public class JwtService {
   @Value("${jwt.oauth.client-id}")
   private String clientId;
 
-  @Value("${jwt.oauth.redirect-uri}")
-  private String redirectUri;
+  // @Value("${jwt.oauth.redirect-uri}")
+  // private String redirectUri;
 
-  @Value("${jwt.oauth.response-type}")
-  private String responseType;
+  // @Value("${jwt.oauth.response-type}")
+  // private String responseType;
 
-  @Value("${jwt.oauth.scope}")
-  private String scope;
+  // @Value("${jwt.oauth.scope}")
+  // private String scope;
 
   @Value("${jwt.oauth.aud}")
   private String aud;
 
+  @Value("${jwt.oauth.verifier-did}")
+  private String verifierDidkey;
+
   private final long expirationTime = 86400000;
+  private final ObjectMapper objectMapper = new ObjectMapper();
 
   public String getToken(UserEntity user) {
-    return getToken(new HashMap<>(), user);
+    Map<String, Object> extraClaims = new HashMap<>();
+    // Aquí ya no necesitas mapear a un UserDTO, directamente trabajas con UserEntity
+    return getToken(extraClaims, user);
+  }
+
+  public VerifiableCredentialPayload parseJwtPayload(
+    Map<String, Object> payload
+  ) {
+    try {
+      // Convertir el payload Map a un objeto AuthRequest automáticamente
+      return objectMapper.convertValue(
+        payload,
+        VerifiableCredentialPayload.class
+      );
+    } catch (IllegalArgumentException e) {
+      log.error("Error parsing JWT payload", e);
+      throw new RuntimeException("Error parsing JWT payload", e);
+    }
   }
 
   private String getToken(Map<String, Object> extraClaims, UserEntity user) {
@@ -140,8 +170,6 @@ public class JwtService {
   public ECPrivateKey loadPrivateKey() throws Exception {
     // Decodificar las coordenadas de Base64
     byte[] dBytes = Base64.getUrlDecoder().decode(d);
-    // byte[] xBytes = Base64.getUrlDecoder().decode(x);
-    // byte[] yBytes = Base64.getUrlDecoder().decode(y);
 
     // Crear la clave privada EC
     ECPrivateKeySpec privateKeySpec = new ECPrivateKeySpec(
@@ -154,18 +182,6 @@ public class JwtService {
     );
 
     return privateKey;
-  }
-
-  // Método para obtener el ECParameterSpec (específica de P-256)
-  private ECParameterSpec getECParameterSpec()
-    throws NoSuchAlgorithmException, InvalidAlgorithmParameterException {
-    // Usar ECGenParameterSpec para especificar la curva P-256
-    ECGenParameterSpec ecSpec = new ECGenParameterSpec("secp256r1"); // "secp256r1" es equivalente a P-256
-    KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC");
-    keyPairGenerator.initialize(ecSpec);
-    ECParameterSpec ecParams =
-      ((ECPublicKey) keyPairGenerator.genKeyPair().getPublic()).getParams();
-    return ecParams;
   }
 
   public String getUserIdFromToken(String token) {
@@ -205,11 +221,115 @@ public class JwtService {
       );
 
       // Usar ObjectMapper para convertir el payload decodificado en un objeto Map
-      ObjectMapper objectMapper = new ObjectMapper();
+
       return objectMapper.readValue(decodedPayload, Map.class);
     } catch (JsonProcessingException | IllegalArgumentException e) {
       throw new RuntimeException("Error al decodificar el JWT", e);
     }
+  }
+
+  // Verifica el JWT recibido y devuelve el payload o lanza un error
+  public Map<String, Object> verifyJwt(String jwt) throws Exception {
+    // Paso 1: Decodificar y obtener el payload del JWT
+    Map<String, Object> payload = decodeJwt(jwt);
+
+    // Paso 2: Verificar el campo 'aud' (audiencia) del JWT
+    String payloadAud = (String) payload.get("aud");
+    if (payloadAud == null || !payloadAud.equals(clientId)) {
+      throw new IllegalArgumentException("Invalid clientId in aud");
+    }
+
+    // Paso 3: Obtener la clave pública del servidor DID
+    String didUrl = String.format("%s/oidc/did/%s", aud, verifierDidkey);
+
+    PublicKey publicKey = getPublicKeyFromServer(didUrl);
+
+    // Paso 4: Verificar la firma del JWT usando la clave pública
+    verifyJwtSignature(jwt, publicKey);
+
+    // Paso 5: Retornar el payload del JWT
+    return payload;
+  }
+
+  private void verifyJwtSignature(String jwt, PublicKey publicKey) {
+    try {
+      Jwts.parserBuilder().setSigningKey(publicKey).build().parseClaimsJws(jwt);
+    } catch (JwtException e) {
+      throw new IllegalArgumentException(
+        "Invalid JWT signature: " + e.getMessage()
+      );
+    }
+  }
+
+  // Obtiene la clave pública desde el servidor DID
+  private PublicKey getPublicKeyFromServer(String didUrl) throws Exception {
+    RestTemplate restTemplate = new RestTemplate();
+    String jsonResponse = restTemplate.getForObject(didUrl, String.class);
+
+    KeysContainer keyContainer = objectMapper.readValue(
+      jsonResponse,
+      KeysContainer.class
+    );
+
+    // Validar que existan claves en la respuesta
+    if (keyContainer.getKeys() == null || keyContainer.getKeys().isEmpty()) {
+      throw new IllegalArgumentException("No keys found in the response");
+    }
+
+    // Buscar la clave con el `kid` correspondiente
+    KeysContainer.Key matchingKey = keyContainer
+      .getKeys()
+      .stream()
+      .filter(key -> verifierDidkey.equals(key.getKid()))
+      .findFirst()
+      .orElseThrow(() ->
+        new IllegalArgumentException(
+          "Key with specified kid not found: " + verifierDidkey
+        )
+      );
+
+    // Validar que la clave tenga la curva esperada
+    if (!"P-256".equals(matchingKey.getCrv())) {
+      throw new IllegalArgumentException(
+        "Unsupported curve: " + matchingKey.getCrv()
+      );
+    }
+
+    // Extraer las coordenadas x e y
+    String x = matchingKey.getX();
+    String y = matchingKey.getY();
+
+    // Decodificar las coordenadas x e y desde Base64 URL
+    byte[] xBytes = Base64.getUrlDecoder().decode(x);
+    byte[] yBytes = Base64.getUrlDecoder().decode(y);
+
+    // Crear el punto EC con las coordenadas x e y
+    ECPoint ecPoint = new ECPoint(
+      new java.math.BigInteger(1, xBytes),
+      new java.math.BigInteger(1, yBytes)
+    );
+
+    // Obtener los parámetros EC (curva utilizada para la clave pública, secp256r1)
+    ECParameterSpec ecParams = getECParameterSpec();
+
+    // Crear la clave pública EC
+    ECPublicKeySpec publicKeySpec = new ECPublicKeySpec(ecPoint, ecParams);
+    KeyFactory keyFactory = KeyFactory.getInstance("EC");
+    ECPublicKey publicKey = (ECPublicKey) keyFactory.generatePublic(
+      publicKeySpec
+    );
+
+    return publicKey;
+  }
+
+  private ECParameterSpec getECParameterSpec()
+    throws NoSuchAlgorithmException, InvalidAlgorithmParameterException {
+    ECGenParameterSpec ecSpec = new ECGenParameterSpec("secp256r1");
+    KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC");
+    keyPairGenerator.initialize(ecSpec);
+    ECParameterSpec ecParams =
+      ((ECPublicKey) keyPairGenerator.genKeyPair().getPublic()).getParams();
+    return ecParams;
   }
 
   public <T> T getClaim(String token, Function<Claims, T> claimsResolver) {

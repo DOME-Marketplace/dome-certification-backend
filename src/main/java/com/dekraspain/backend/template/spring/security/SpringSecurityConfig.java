@@ -33,7 +33,7 @@ public class SpringSecurityConfig {
           .authenticated()
           .requestMatchers("/api/v1/send-mail")
           .authenticated()
-          .requestMatchers(HttpMethod.GET, "/api/v1/user")
+          .requestMatchers(HttpMethod.GET, "/api/v1/user/**")
           .authenticated()
           .requestMatchers(HttpMethod.OPTIONS)
           .permitAll()

@@ -1,16 +1,6 @@
 package com.dekraspain.backend.template.modules.user.persistence.entity;
 
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
-
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-
 import com.dekraspain.backend.template.modules.user.domain.model.UserRole;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -25,10 +15,17 @@ import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 @Data
 @Builder
@@ -38,8 +35,8 @@ import lombok.NoArgsConstructor;
 @Table(
   name = "users",
   uniqueConstraints = {
-    @UniqueConstraint(columnNames = "username"),
     @UniqueConstraint(columnNames = "email"),
+    @UniqueConstraint(columnNames = "didkey"),
   }
 )
 public class UserEntity implements UserDetails {
@@ -49,7 +46,6 @@ public class UserEntity implements UserDetails {
   @Column(columnDefinition = "uuid", updatable = false)
   public UUID id;
 
-  @NotBlank
   @Size(max = 20)
   public String username;
 
@@ -74,10 +70,11 @@ public class UserEntity implements UserDetails {
 
   public String website;
 
+  public String didkey;
+
   @Temporal(TemporalType.TIMESTAMP)
   public Date last_seen;
 
-  @NotBlank
   @Size(max = 120)
   public String password;
 

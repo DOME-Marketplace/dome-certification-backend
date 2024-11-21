@@ -20,8 +20,8 @@ public class LoginRequest {
   @NotBlank(message = "Username cannot be blank")
   @Size(
     min = 3,
-    max = 20,
-    message = "Username must be between 3 and 20 characters long"
+    max = 100,
+    message = "Username must be between 3 and 100 characters long"
   )
   public String username;
 

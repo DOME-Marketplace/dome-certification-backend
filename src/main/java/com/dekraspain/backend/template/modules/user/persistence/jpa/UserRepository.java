@@ -8,7 +8,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface UserRepository extends JpaRepository<UserEntity, UUID> {
   Optional<UserEntity> findByUsername(String username);
 
+  Optional<UserEntity> findByUsernameOrEmail(String username, String email);
+
   Boolean existsByUsername(String username);
 
   Boolean existsByEmail(String email);
+
+  Optional<UserEntity> findByEmail(String email);
+
+  Boolean existsByDidkey(String didkey);
+
+  Optional<UserEntity> findByDidkey(String didkey);
 }

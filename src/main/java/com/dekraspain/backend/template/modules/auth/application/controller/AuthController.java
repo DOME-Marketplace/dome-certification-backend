@@ -2,32 +2,17 @@ package com.dekraspain.backend.template.modules.auth.application.controller;
 
 import com.dekraspain.backend.template.modules.auth.application.request.LoginRequest;
 import com.dekraspain.backend.template.modules.auth.application.request.RegisterRequest;
+import com.dekraspain.backend.template.modules.auth.application.request.VerifiableCredentialPayload;
 import com.dekraspain.backend.template.modules.auth.application.response.AuthResponse;
 import com.dekraspain.backend.template.modules.auth.domain.service.AuthService;
-import com.dekraspain.backend.template.modules.user.domain.service.UserService;
 import com.dekraspain.backend.template.spring.Jwt.JwtService;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jws;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.KeyFactory;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
-import java.security.interfaces.ECPublicKey;
-import java.security.spec.ECGenParameterSpec;
-import java.security.spec.ECParameterSpec;
-import java.security.spec.ECPoint;
-import java.security.spec.ECPublicKeySpec;
-import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -39,7 +24,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.RestTemplate;
 
 @Tag(name = "Auth")
 @RestController
@@ -47,14 +31,7 @@ import org.springframework.web.client.RestTemplate;
 @RequiredArgsConstructor
 public class AuthController {
 
-  @Value("${jwt.public.key.x}")
-  private String x;
-
-  @Value("${jwt.public.key.y}")
-  private String y;
-
   private final AuthService authService;
-  private final UserService userService;
   private final JwtService jwtService;
 
   @Operation(summary = "Login")
@@ -62,10 +39,12 @@ public class AuthController {
   public ResponseEntity<AuthResponse> login(
     @Valid @RequestBody LoginRequest request
   ) {
-    if (!authService.existsByUsername(request.username)) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+    if (
+      !authService.existsByUsername(request.username) &&
+      !authService.existsByEmail(request.username)
+    ) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
     }
-    userService.updateLastSeen(request.getUsername());
 
     return ResponseEntity.ok(authService.login(request));
   }
@@ -75,12 +54,11 @@ public class AuthController {
   public ResponseEntity<AuthResponse> register(
     @Valid @RequestBody RegisterRequest request
   ) {
-    if (authService.existsByUsername(request.username)) {
-      return ResponseEntity.badRequest().body(null);
-    }
-
-    if (authService.existsByEmail(request.email)) {
-      return ResponseEntity.badRequest().body(null);
+    if (
+      authService.existsByUsername(request.username) ||
+      authService.existsByEmail(request.username)
+    ) {
+      return ResponseEntity.status(HttpStatus.ALREADY_REPORTED).body(null);
     }
 
     return ResponseEntity.ok(authService.register(request));
@@ -111,89 +89,55 @@ public class AuthController {
     return jwtService.generateRequestToken();
   }
 
-  @PostMapping("/verify")
-  public ResponseEntity<Map<String, Object>> verifyJwt(
-    @RequestBody Map<String, String> requestBody
-  ) throws JwtException {
+  @Operation(summary = "client-assertion-token")
+  @GetMapping(value = "client-assertion-token")
+  public String generateClientAssertionToken() {
+    return jwtService.generateClientAssertionToken();
+  }
+
+  @Operation(summary = "exchange-token")
+  @PostMapping(value = "exchange-token")
+  public ResponseEntity<AuthResponse> exchangeToken(
+    @RequestBody String requesToken
+  ) {
     try {
-      // Paso 1: Extraer el JWT desde la solicitud
-      String jwt = requestBody.get("jwt");
-      if (jwt == null || jwt.isEmpty()) {
-        return ResponseEntity
-          .badRequest()
-          .body(Map.of("error", "JWT is missing"));
+      Map<String, Object> payload = jwtService.verifyJwt(requesToken);
+
+      VerifiableCredentialPayload verifiableCredential = jwtService.parseJwtPayload(
+        payload
+      );
+      VerifiableCredentialPayload.CredentialSubject credentialSubject = verifiableCredential
+        .getVerifiableCredential()
+        .getCredentialSubject();
+
+      VerifiableCredentialPayload.Mandatee mandatee = verifiableCredential
+        .getVerifiableCredential()
+        .getCredentialSubject()
+        .getMandate()
+        .getMandatee();
+
+      // Si el didkey ya existe en la base de datos, proceder con el logins
+      if (authService.existsByDidkey(mandatee.getId())) {
+        // Login: Obtiene al usuario a partir de didkey
+        return ResponseEntity.ok(authService.loginProvider(mandatee.getId()));
       }
 
-      // Paso 2: Extraer el DID del JWT (campo "aud")
-      Map<String, Object> payload = jwtService.decodeJwt(jwt);
+      // Si no existe el didkey, intentamos con el email
+      if (authService.existsByEmail(mandatee.getEmail())) {
+        // Actualiza y asigna el didkey si es necesario
 
-      String didUrl =
-        "https://verifier.dome-marketplace-sbx.org/oidc/did/" +
-        payload.get("iss");
+        return ResponseEntity.ok(
+          authService.loginProviderAndUpdate(
+            mandatee.getEmail(),
+            mandatee.getId()
+          )
+        );
+      }
 
-      // Paso 3: Obtener la clave pública desde la URL DID
-      PublicKey publicKey = getPublicKeyFromServer(didUrl);
-
-      // Paso 4: Verificar la firma del JWT con la clave pública
-      Jws<Claims> claimsJws = Jwts
-        .parserBuilder()
-        .setSigningKey(publicKey)
-        .build()
-        .parseClaimsJws(jwt); // Verifica la firma y lanza un error si no es válida
-
-      // Convertir Claims a un Map para el JSON de respuesta
-      Claims claims = claimsJws.getBody();
-
-      // Convertir Claims a un Map para el JSON de respuesta
-      Map<String, Object> claimsMap = new HashMap<>(claims);
-
-      return ResponseEntity.ok(claimsMap);
+      // Si no se encuentra el usuario, puedes manejar el registro o retornar un error
+      return ResponseEntity.ok(authService.registerProvider(credentialSubject));
     } catch (Exception e) {
-      // Cambiar la respuesta de error a un Map<String, Object> para mantener la consistencia
-      return ResponseEntity
-        .status(HttpStatus.BAD_REQUEST)
-        .body(Map.of("error", "Invalid JWT: " + e.getMessage()));
+      return ResponseEntity.badRequest().body(null);
     }
-  }
-
-  private PublicKey getPublicKeyFromServer(String didUrl) throws Exception {
-    // Realizamos una solicitud HTTP GET a la URL DID para obtener la clave pública
-    RestTemplate restTemplate = new RestTemplate();
-    String jsonResponse = restTemplate.getForObject(didUrl, String.class);
-
-    // Extraemos las coordenadas x e y de la respuesta JSON
-
-    // String x = extractJsonValue(jsonResponse, "x");
-    // String y = extractJsonValue(jsonResponse, "y");
-
-    // Decodificar las coordenadas x e y desde Base64
-    byte[] xBytes = Base64.getUrlDecoder().decode(x);
-    byte[] yBytes = Base64.getUrlDecoder().decode(y);
-
-    // Crear el punto EC con las coordenadas x e y
-    ECPoint ecPoint = new ECPoint(
-      new java.math.BigInteger(1, xBytes),
-      new java.math.BigInteger(1, yBytes)
-    );
-
-    // Crear la clave pública EC
-    ECParameterSpec ecParams = getECParameterSpec();
-    ECPublicKeySpec publicKeySpec = new ECPublicKeySpec(ecPoint, ecParams);
-    KeyFactory keyFactory = KeyFactory.getInstance("EC");
-    ECPublicKey publicKey = (ECPublicKey) keyFactory.generatePublic(
-      publicKeySpec
-    );
-
-    return publicKey;
-  }
-
-  private ECParameterSpec getECParameterSpec()
-    throws NoSuchAlgorithmException, InvalidAlgorithmParameterException {
-    ECGenParameterSpec ecSpec = new ECGenParameterSpec("secp256r1");
-    KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC");
-    keyPairGenerator.initialize(ecSpec);
-    ECParameterSpec ecParams =
-      ((ECPublicKey) keyPairGenerator.genKeyPair().getPublic()).getParams();
-    return ecParams;
   }
 }
