@@ -49,14 +49,8 @@ public class JwtService {
   @Value("${jwt.oauth.client-id}")
   private String clientId;
 
-  // @Value("${jwt.oauth.redirect-uri}")
-  // private String redirectUri;
-
-  // @Value("${jwt.oauth.response-type}")
-  // private String responseType;
-
-  // @Value("${jwt.oauth.scope}")
-  // private String scope;
+  @Value("${jwt.oauth.redirect-uri}")
+  private String redirectUri;
 
   @Value("${jwt.oauth.aud}")
   private String aud;
@@ -111,10 +105,7 @@ public class JwtService {
       claims.put("aud", aud);
       claims.put("response_type", "code");
       claims.put("client_id", clientId);
-      claims.put(
-        "redirect_uri",
-        "https://dome-certification.dome-marketplace-sbx.org/auth/login"
-      );
+      claims.put("redirect_uri", redirectUri);
       claims.put("scope", "openid learcredential");
 
       // Crear los parámetros del header
