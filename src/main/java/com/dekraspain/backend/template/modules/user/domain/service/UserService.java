@@ -1,14 +1,17 @@
 package com.dekraspain.backend.template.modules.user.domain.service;
 
+import java.util.Date;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+
 import com.dekraspain.backend.template.modules.user.domain.model.UserDTO;
 import com.dekraspain.backend.template.modules.user.domain.model.UserRole;
 import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
 import com.dekraspain.backend.template.modules.user.persistence.jpa.UserRepository;
+
 import jakarta.transaction.Transactional;
-import java.util.Date;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
@@ -141,13 +144,18 @@ public class UserService {
       );
   }
 
-  public UserEntity updateDidKey(UUID userId, String didKey) {
-    UserEntity user = userRepository
-      .findById(userId)
-      .orElseThrow(() ->
-        new IllegalArgumentException("User not found with ID: " + userId)
-      );
+  public UserEntity updateDidKeyAndRole(
+    UserEntity user,
+    String didKey,
+    UserRole role
+  ) {
     user.setDidkey(didKey);
+    user.setRole(role);
+    return userRepository.save(user);
+  }
+
+  public UserEntity updateRole(UserEntity user, UserRole role) {
+    user.setRole(role);
     return userRepository.save(user);
   }
 }
