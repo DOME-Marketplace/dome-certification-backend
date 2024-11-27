@@ -1,26 +1,5 @@
 package com.dekraspain.backend.template.modules.productOffering.application.controller;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
-
 import com.dekraspain.backend.template.modules.productOffering.application.request.ProductOfferingRequest;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.CompilanceProfileDTO;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ComplianceNamesDTO;
@@ -35,11 +14,29 @@ import com.dekraspain.backend.template.modules.user.domain.model.UserDTO;
 import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
 import com.dekraspain.backend.template.shared.customResponses.ApiResponse;
 import com.dekraspain.backend.template.shared.email.service.EmailService;
-
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @Tag(name = "product-offering")
@@ -256,13 +253,12 @@ public class ProductOfferingController {
 
     // Send email
     String email = productOffering.email_organization;
-    String subject =
-      "Compliance of " +
-      productOffering.getService_name() +
-      " " +
-      productOffering.getService_version() +
-      " is " +
-      request.getStatus();
+    String subject = String.format(
+      "Compliance of %s %s is %s",
+      productOffering.getService_name(),
+      productOffering.getService_version(),
+      request.getStatus()
+    );
 
     // Enviar correo si el estado es VALIDADO
     if (request.getStatus().equals(ProductOfferingStates.VALIDATED)) {
@@ -311,19 +307,31 @@ public class ProductOfferingController {
 
       // Datos para el correo
       String email = productOffering.getEmail_organization();
-      String subject =
-        "Compliance of " +
-        productOffering.getService_name() +
-        " " +
-        productOffering.getService_version();
+      String subject = String.format(
+        "Compliance of %s %s",
+        productOffering.getService_name(),
+        productOffering.getService_version()
+      );
 
-      // Enviar correo de validación
       try {
-        emailService.sendEmailWithTemplateNoContext(
-          email,
-          subject,
-          "email-validated"
-        );
+        if (
+          productOffering.getStatus().equals(ProductOfferingStates.REJECTED)
+        ) {
+          emailService.sendEmailWithTemplateNoContext(
+            email,
+            subject,
+            "email-rejected"
+          );
+        }
+        if (
+          productOffering.getStatus().equals(ProductOfferingStates.VALIDATED)
+        ) {
+          emailService.sendEmailWithTemplateNoContext(
+            email,
+            subject,
+            "email-validated"
+          );
+        }
         log.info("Email sent to: {}", email);
       } catch (Exception e) {
         log.warn("Error sending email to: {}", email, e);
