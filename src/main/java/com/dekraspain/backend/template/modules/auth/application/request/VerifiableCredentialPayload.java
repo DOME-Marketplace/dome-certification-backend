@@ -13,7 +13,7 @@ public class VerifiableCredentialPayload {
   private long exp;
   private long iat;
   private String jti;
-  private VerifiableCredential verifiableCredential;
+  private VerifiableCredential vc;
 
   @Data
   public static class VerifiableCredential {
