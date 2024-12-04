@@ -1,5 +1,6 @@
 package com.dekraspain.backend.template.modules.auth.application.request;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.util.List;
 import lombok.Data;
 
@@ -78,7 +79,10 @@ public class VerifiableCredentialPayload {
   public static class Power {
 
     private String id;
+
+    @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
     private List<String> tmfAction;
+
     private String tmfDomain;
     private String tmfFunction;
     private String tmfType;
