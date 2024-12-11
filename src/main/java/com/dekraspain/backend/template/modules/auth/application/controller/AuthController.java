@@ -132,7 +132,8 @@ public class AuthController {
           power != null &&
           power
             .stream()
-            .anyMatch(p -> "certification".equalsIgnoreCase(p.getTmfFunction()))
+            .anyMatch(p -> "certification".equalsIgnoreCase(p.getTmf_function())
+            )
         )
         ? UserRole.EMPLOYEE
         : UserRole.CUSTOMER;

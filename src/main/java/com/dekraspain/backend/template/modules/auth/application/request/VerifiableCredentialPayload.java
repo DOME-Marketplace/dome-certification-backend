@@ -40,7 +40,7 @@ public class VerifiableCredentialPayload {
   public static class Mandate {
 
     private String id;
-    private LifeSpan lifeSpan;
+    private LifeSpan life_span;
     private Mandatee mandatee;
     private Mandator mandator;
     private List<Power> power;
@@ -50,8 +50,8 @@ public class VerifiableCredentialPayload {
   @Data
   public static class LifeSpan {
 
-    private String startDateTime;
-    private String endDateTime;
+    private String start_date_time;
+    private String end_date_time;
   }
 
   @Data
@@ -59,9 +59,9 @@ public class VerifiableCredentialPayload {
 
     private String id;
     private String email;
-    private String firstName;
-    private String lastName;
-    private String mobilePhone;
+    private String first_name;
+    private String last_name;
+    private String mobile_phone;
   }
 
   @Data
@@ -81,11 +81,11 @@ public class VerifiableCredentialPayload {
     private String id;
 
     @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
-    private List<String> tmfAction;
+    private List<String> tmf_action;
 
-    private String tmfDomain;
-    private String tmfFunction;
-    private String tmfType;
+    private String tmf_domain;
+    private String tmf_function;
+    private String tmf_type;
   }
 
   @Data

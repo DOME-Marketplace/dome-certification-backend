@@ -1,10 +1,5 @@
 package com.dekraspain.backend.template.modules.auth.domain.service;
 
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-
 import com.dekraspain.backend.template.modules.auth.application.request.LoginRequest;
 import com.dekraspain.backend.template.modules.auth.application.request.RegisterRequest;
 import com.dekraspain.backend.template.modules.auth.application.request.VerifiableCredentialPayload;
@@ -14,8 +9,11 @@ import com.dekraspain.backend.template.modules.user.domain.service.AccessLogServ
 import com.dekraspain.backend.template.modules.user.domain.service.UserService;
 import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
 import com.dekraspain.backend.template.spring.Jwt.JwtService;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
@@ -106,8 +104,8 @@ public class AuthService {
     // Creación del nuevo usuario
     UserEntity newUser = userService.createUserProvider(
       credentialSubject.getMandate().getMandatee().getEmail(),
-      credentialSubject.getMandate().getMandatee().getFirstName(),
-      credentialSubject.getMandate().getMandatee().getLastName(),
+      credentialSubject.getMandate().getMandatee().getFirst_name(),
+      credentialSubject.getMandate().getMandatee().getLast_name(),
       credentialSubject.getMandate().getMandator().getCountry(),
       credentialSubject.getMandate().getMandator().getOrganization(),
       credentialSubject.getMandate().getMandatee().getId(),
