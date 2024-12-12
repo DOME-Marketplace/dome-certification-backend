@@ -1,6 +1,7 @@
 package com.dekraspain.backend.template.modules.auth.application.request;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import lombok.Data;
 
@@ -19,7 +20,9 @@ public class VerifiableCredentialPayload {
   @Data
   public static class VerifiableCredential {
 
+    @JsonProperty("@context")
     private List<String> context;
+
     private String id;
     private List<String> type;
     private CredentialSubject credentialSubject;
