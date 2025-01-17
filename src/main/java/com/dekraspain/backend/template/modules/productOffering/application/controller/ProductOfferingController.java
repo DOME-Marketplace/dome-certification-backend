@@ -96,7 +96,8 @@ public class ProductOfferingController {
         ComplianceNamesDTO
           .builder()
           .id(c.getId())
-          .complianceName(c.getComplianceName())
+          .complianceName(c.getCompliancesStandard().getStandard())
+          .complianceDescription(c.getCompliancesStandard().getDescription())
           .build()
       )
       .collect(Collectors.toList());

@@ -1,5 +1,22 @@
 package com.dekraspain.backend.template.modules.productOffering.domain.service;
 
+import com.dekraspain.backend.template.modules.productOffering.application.request.ProductOfferingRequest;
+import com.dekraspain.backend.template.modules.productOffering.domain.model.CompilanceProfileDTO;
+import com.dekraspain.backend.template.modules.productOffering.domain.model.ComplianceNamesDTO;
+import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingDTO;
+import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingStates;
+import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingStatesDTO;
+import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ComplianceEntity;
+import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ComplianceProfileEntity;
+import com.dekraspain.backend.template.modules.productOffering.persistence.entity.CompliancesStandarsEntity;
+import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ProductOfferingEntity;
+import com.dekraspain.backend.template.modules.productOffering.persistence.jpa.ComplianceProfileRepository;
+import com.dekraspain.backend.template.modules.productOffering.persistence.jpa.ComplianceRepository;
+import com.dekraspain.backend.template.modules.productOffering.persistence.jpa.ComplianceStandardRepository;
+import com.dekraspain.backend.template.modules.productOffering.persistence.jpa.ProductOfferingRepository;
+import com.dekraspain.backend.template.modules.user.domain.model.UserDTO;
+import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
+import com.dekraspain.backend.template.shared.email.service.EmailService;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -9,7 +26,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,24 +35,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
-
-import com.dekraspain.backend.template.modules.productOffering.application.request.ProductOfferingRequest;
-import com.dekraspain.backend.template.modules.productOffering.domain.model.CompilanceProfileDTO;
-import com.dekraspain.backend.template.modules.productOffering.domain.model.ComplianceNamesDTO;
-import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingDTO;
-import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingStates;
-import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingStatesDTO;
-import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ComplianceEntity;
-import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ComplianceProfileEntity;
-import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ProductOfferingEntity;
-import com.dekraspain.backend.template.modules.productOffering.persistence.jpa.ComplianceProfileRepository;
-import com.dekraspain.backend.template.modules.productOffering.persistence.jpa.ComplianceRepository;
-import com.dekraspain.backend.template.modules.productOffering.persistence.jpa.ProductOfferingRepository;
-import com.dekraspain.backend.template.modules.user.domain.model.UserDTO;
-import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
-import com.dekraspain.backend.template.shared.email.service.EmailService;
-
-import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -48,6 +47,7 @@ public class ProductOfferingService {
   private final ComplianceProfileRepository complianceProfileRepository;
   private final EmailService emailService;
   private final ComplianceRepository complianceRepository;
+  private final ComplianceStandardRepository complianceStandardRepository;
 
   private static final Logger logger = LoggerFactory.getLogger(
     ProductOfferingService.class
@@ -142,12 +142,19 @@ public class ProductOfferingService {
       existingProductOffering.setIssuer(user);
       existingProductOffering.setExpiration_date(request.getExpiration_date());
 
-      Optional<List<String>> compliances = request.getCompliances();
+      Optional<List<Long>> compliances = request.getCompliances();
 
-      for (String compliance : compliances.get()) {
+      for (Long compliance : compliances.get()) {
+        if (!complianceRepository.existsById(compliance)) {
+          // skip
+          continue;
+        }
+        CompliancesStandarsEntity compliancesStandarsEntity = complianceStandardRepository
+          .findById(compliance)
+          .orElseThrow();
         ComplianceEntity complianceEntity = ComplianceEntity
           .builder()
-          .complianceName(compliance)
+          .compliancesStandard(compliancesStandarsEntity)
           .productOffering(existingProductOffering)
           .build();
         complianceRepository.save(complianceEntity);
@@ -214,7 +221,8 @@ public class ProductOfferingService {
         ComplianceNamesDTO
           .builder()
           .id(c.getId())
-          .complianceName(c.getComplianceName())
+          .complianceName(c.getCompliancesStandard().getStandard())
+          .complianceDescription(c.getCompliancesStandard().getDescription())
           .build()
       )
       .collect(Collectors.toList());
@@ -338,7 +346,10 @@ public class ProductOfferingService {
                 ComplianceNamesDTO
                   .builder()
                   .id(c.getId())
-                  .complianceName(c.getComplianceName())
+                  .complianceName(c.getCompliancesStandard().getStandard())
+                  .complianceDescription(
+                    c.getCompliancesStandard().getDescription()
+                  )
                   .build()
               )
               .collect(Collectors.toList())
@@ -436,7 +447,10 @@ public class ProductOfferingService {
                 ComplianceNamesDTO
                   .builder()
                   .id(c.getId())
-                  .complianceName(c.getComplianceName())
+                  .complianceName(c.getCompliancesStandard().getStandard())
+                  .complianceDescription(
+                    c.getCompliancesStandard().getDescription()
+                  )
                   .build()
               )
               .collect(Collectors.toList())

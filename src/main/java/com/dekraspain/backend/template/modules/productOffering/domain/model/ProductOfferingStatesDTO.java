@@ -22,5 +22,5 @@ public class ProductOfferingStatesDTO {
 
   private String comments;
 
-  private Optional<List<String>> compliances;
+  private Optional<List<Long>> compliances;
 }

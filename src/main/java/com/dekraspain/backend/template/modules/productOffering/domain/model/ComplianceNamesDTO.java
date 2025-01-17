@@ -13,4 +13,5 @@ public class ComplianceNamesDTO {
 
   private Long id;
   private String complianceName;
+  private String complianceDescription;
 }
