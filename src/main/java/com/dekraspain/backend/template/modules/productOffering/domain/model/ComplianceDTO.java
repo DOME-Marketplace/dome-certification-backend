@@ -9,10 +9,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class CompilanceProfileDTO {
+public class ComplianceDTO {
 
-  private Long id;
-  private String fileName;
-  private String url;
-  private String hash;
+  public Long id;
+
+  public CompilanceProfileDTO complianceProfile;
+
+  public ComplianceStandardsDTO complianceStandard;
 }

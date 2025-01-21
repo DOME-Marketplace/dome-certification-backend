@@ -1,32 +1,17 @@
 package com.dekraspain.backend.template.modules.productOffering.domain.service;
 
-import com.dekraspain.backend.template.modules.productOffering.application.request.ProductOfferingRequest;
-import com.dekraspain.backend.template.modules.productOffering.domain.model.CompilanceProfileDTO;
-import com.dekraspain.backend.template.modules.productOffering.domain.model.ComplianceNamesDTO;
-import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingDTO;
-import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingStates;
-import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingStatesDTO;
-import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ComplianceEntity;
-import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ComplianceProfileEntity;
-import com.dekraspain.backend.template.modules.productOffering.persistence.entity.CompliancesStandarsEntity;
-import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ProductOfferingEntity;
-import com.dekraspain.backend.template.modules.productOffering.persistence.jpa.ComplianceProfileRepository;
-import com.dekraspain.backend.template.modules.productOffering.persistence.jpa.ComplianceRepository;
-import com.dekraspain.backend.template.modules.productOffering.persistence.jpa.ComplianceStandardRepository;
-import com.dekraspain.backend.template.modules.productOffering.persistence.jpa.ProductOfferingRepository;
-import com.dekraspain.backend.template.modules.user.domain.model.UserDTO;
-import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
-import com.dekraspain.backend.template.shared.email.service.EmailService;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +20,24 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+
+import com.dekraspain.backend.template.modules.productOffering.application.request.CompliancesRequest;
+import com.dekraspain.backend.template.modules.productOffering.application.request.ProductOfferingRequest;
+import com.dekraspain.backend.template.modules.productOffering.domain.model.CompilanceProfileDTO;
+import com.dekraspain.backend.template.modules.productOffering.domain.model.ComplianceDTO;
+import com.dekraspain.backend.template.modules.productOffering.domain.model.ComplianceStandardsDTO;
+import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingDTO;
+import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingStates;
+import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingStatesDTO;
+import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ComplianceProfileEntity;
+import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ProductOfferingEntity;
+import com.dekraspain.backend.template.modules.productOffering.persistence.jpa.ComplianceProfileRepository;
+import com.dekraspain.backend.template.modules.productOffering.persistence.jpa.ProductOfferingRepository;
+import com.dekraspain.backend.template.modules.user.domain.model.UserDTO;
+import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
+import com.dekraspain.backend.template.shared.email.service.EmailService;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -46,8 +49,7 @@ public class ProductOfferingService {
   private final ProductOfferingRepository productOfferingRepository;
   private final ComplianceProfileRepository complianceProfileRepository;
   private final EmailService emailService;
-  private final ComplianceRepository complianceRepository;
-  private final ComplianceStandardRepository complianceStandardRepository;
+  private final ComplianceService complianceService;
 
   private static final Logger logger = LoggerFactory.getLogger(
     ProductOfferingService.class
@@ -94,6 +96,7 @@ public class ProductOfferingService {
     }
 
     for (MultipartFile file : files) {
+      String fileHash = calculateFileHash(file);
       // Guardar el archivo en el almacenamiento de Spring Boot
       String fileName = StringUtils.cleanPath(file.getOriginalFilename());
       Path staticFilePath = uploadPath.resolve(fileName);
@@ -109,11 +112,31 @@ public class ProductOfferingService {
         .builder()
         .fileName(fileName)
         .productOffering(productOffering)
-        .url(fileDownloadUri) // Usar la URI de descarga generada
+        .url(fileDownloadUri)
+        .hash(fileHash)
         .build();
 
       // Guardar el ComplianceProfileEntity en la base de datos
       complianceProfileRepository.save(complianceProfile);
+    }
+  }
+
+  private String calculateFileHash(MultipartFile file) throws IOException {
+    try {
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      byte[] fileBytes = file.getBytes();
+      byte[] hashBytes = digest.digest(fileBytes);
+
+      // Convertir el hash a una representación en hexadecimal
+      StringBuilder hexString = new StringBuilder();
+      for (byte b : hashBytes) {
+        String hex = Integer.toHexString(0xff & b);
+        if (hex.length() == 1) hexString.append('0');
+        hexString.append(hex);
+      }
+      return hexString.toString();
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException("Error al calcular el hash del archivo", e);
     }
   }
 
@@ -142,24 +165,16 @@ public class ProductOfferingService {
       existingProductOffering.setIssuer(user);
       existingProductOffering.setExpiration_date(request.getExpiration_date());
 
-      Optional<List<Long>> compliances = request.getCompliances();
+      Optional<List<CompliancesRequest>> compliances = request.getCompliances();
 
-      for (Long compliance : compliances.get()) {
-        if (!complianceRepository.existsById(compliance)) {
-          // skip
-          continue;
-        }
-        CompliancesStandarsEntity compliancesStandarsEntity = complianceStandardRepository
-          .findById(compliance)
-          .orElseThrow();
-        ComplianceEntity complianceEntity = ComplianceEntity
-          .builder()
-          .compliancesStandard(compliancesStandarsEntity)
-          .productOffering(existingProductOffering)
-          .build();
-        complianceRepository.save(complianceEntity);
+      for (CompliancesRequest compliance : compliances.get()) {
+        Long profileIdLong = compliance.getProfileId();
+        Long standardId = compliance.getStandardId();
+
+        complianceService.createCompliance(standardId, profileIdLong, id);
       }
     }
+    existingProductOffering.setStatus(request.getStatus());
 
     ProductOfferingEntity updatedProductOffering = productOfferingRepository.save(
       existingProductOffering
@@ -210,19 +225,39 @@ public class ProductOfferingService {
           .id(cp.getId())
           .fileName(cp.getFileName())
           .url(cp.getUrl())
+          .hash(cp.getHash())
           .build()
       )
       .collect(Collectors.toList());
 
-    List<ComplianceNamesDTO> compliances = updatedProductOffering
+    List<ComplianceDTO> compliances = updatedProductOffering
       .getCompliances()
       .stream()
       .map(c ->
-        ComplianceNamesDTO
+        ComplianceDTO
           .builder()
           .id(c.getId())
-          .complianceName(c.getCompliancesStandard().getStandard())
-          .complianceDescription(c.getCompliancesStandard().getDescription())
+          .complianceProfile(
+            c.getComplianceProfile() != null
+              ? CompilanceProfileDTO
+                .builder()
+                .id(c.getComplianceProfile().getId())
+                .fileName(c.getComplianceProfile().getFileName())
+                .url(c.getComplianceProfile().getUrl())
+                .hash(c.getComplianceProfile().getHash())
+                .build()
+              : null
+          )
+          .complianceStandard(
+            c.getCompliancesStandard() != null
+              ? ComplianceStandardsDTO
+                .builder()
+                .id(c.getCompliancesStandard().getId())
+                .standard(c.getCompliancesStandard().getStandard())
+                .description(c.getCompliancesStandard().getDescription())
+                .build()
+              : null
+          )
           .build()
       )
       .collect(Collectors.toList());
@@ -285,6 +320,7 @@ public class ProductOfferingService {
               .website(productOffering.getIssuer().getWebsite())
               .build();
         }
+
         UserDTO userDTO = null;
         if (productOffering.getUser() != null) {
           userDTO =
@@ -318,7 +354,7 @@ public class ProductOfferingService {
           .VAT_ID(productOffering.getVAT_ID())
           .comments(productOffering.getComments())
           .status(productOffering.getStatus())
-          .issuer(issuerDTO) // Puede ser null sin causar error
+          .issuer(issuerDTO)
           .user(userDTO)
           .complianceProfiles(
             productOffering
@@ -343,12 +379,31 @@ public class ProductOfferingService {
               .getCompliances()
               .stream()
               .map(c ->
-                ComplianceNamesDTO
+                ComplianceDTO
                   .builder()
                   .id(c.getId())
-                  .complianceName(c.getCompliancesStandard().getStandard())
-                  .complianceDescription(
-                    c.getCompliancesStandard().getDescription()
+                  .complianceProfile(
+                    c.getComplianceProfile() != null
+                      ? CompilanceProfileDTO
+                        .builder()
+                        .id(c.getComplianceProfile().getId())
+                        .fileName(c.getComplianceProfile().getFileName())
+                        .url(c.getComplianceProfile().getUrl())
+                        .hash(c.getComplianceProfile().getHash())
+                        .build()
+                      : null
+                  )
+                  .complianceStandard(
+                    c.getCompliancesStandard() != null
+                      ? ComplianceStandardsDTO
+                        .builder()
+                        .id(c.getCompliancesStandard().getId())
+                        .standard(c.getCompliancesStandard().getStandard())
+                        .description(
+                          c.getCompliancesStandard().getDescription()
+                        )
+                        .build()
+                      : null
                   )
                   .build()
               )
@@ -365,10 +420,10 @@ public class ProductOfferingService {
     Authentication authentication = SecurityContextHolder
       .getContext()
       .getAuthentication();
-
     UserEntity user = (UserEntity) authentication.getPrincipal();
+
     List<ProductOfferingDTO> productOfferings = productOfferingRepository
-      .findAllByUserId(user.id)
+      .findAllByUserId(user.getId())
       .stream()
       .map(productOffering ->
         ProductOfferingDTO
@@ -401,7 +456,7 @@ public class ProductOfferingService {
                 )
                 .website(productOffering.getIssuer().getWebsite())
                 .build()
-              : null // Si el issuer es null, se asigna null
+              : null
           )
           .user(
             productOffering.getUser() != null
@@ -419,7 +474,7 @@ public class ProductOfferingService {
                 )
                 .website(productOffering.getUser().getWebsite())
                 .build()
-              : null // Si el user es null, se asigna null
+              : null
           )
           .complianceProfiles(
             productOffering
@@ -431,6 +486,7 @@ public class ProductOfferingService {
                   .id(cp.getId())
                   .fileName(cp.getFileName())
                   .url(cp.getUrl())
+                  .hash(cp.getHash())
                   .build()
               )
               .collect(Collectors.toList())
@@ -444,12 +500,31 @@ public class ProductOfferingService {
               .getCompliances()
               .stream()
               .map(c ->
-                ComplianceNamesDTO
+                ComplianceDTO
                   .builder()
                   .id(c.getId())
-                  .complianceName(c.getCompliancesStandard().getStandard())
-                  .complianceDescription(
-                    c.getCompliancesStandard().getDescription()
+                  .complianceProfile(
+                    c.getComplianceProfile() != null
+                      ? CompilanceProfileDTO
+                        .builder()
+                        .id(c.getComplianceProfile().getId())
+                        .fileName(c.getComplianceProfile().getFileName())
+                        .url(c.getComplianceProfile().getUrl())
+                        .hash(c.getComplianceProfile().getHash())
+                        .build()
+                      : null
+                  )
+                  .complianceStandard(
+                    c.getCompliancesStandard() != null
+                      ? ComplianceStandardsDTO
+                        .builder()
+                        .id(c.getCompliancesStandard().getId())
+                        .standard(c.getCompliancesStandard().getStandard())
+                        .description(
+                          c.getCompliancesStandard().getDescription()
+                        )
+                        .build()
+                      : null
                   )
                   .build()
               )

@@ -2,7 +2,8 @@ package com.dekraspain.backend.template.modules.productOffering.application.cont
 
 import com.dekraspain.backend.template.modules.productOffering.application.request.ProductOfferingRequest;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.CompilanceProfileDTO;
-import com.dekraspain.backend.template.modules.productOffering.domain.model.ComplianceNamesDTO;
+import com.dekraspain.backend.template.modules.productOffering.domain.model.ComplianceDTO;
+import com.dekraspain.backend.template.modules.productOffering.domain.model.ComplianceStandardsDTO;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingDTO;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingStates;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingStatesDTO;
@@ -85,19 +86,39 @@ public class ProductOfferingController {
           .id(cp.getId())
           .fileName(cp.getFileName())
           .url(cp.getUrl())
+          .hash(cp.getHash())
           .build()
       )
       .collect(Collectors.toList());
 
-    List<ComplianceNamesDTO> compliances = productOffering
+    List<ComplianceDTO> compliances = productOffering
       .getCompliances()
       .stream()
       .map(c ->
-        ComplianceNamesDTO
+        ComplianceDTO
           .builder()
           .id(c.getId())
-          .complianceName(c.getCompliancesStandard().getStandard())
-          .complianceDescription(c.getCompliancesStandard().getDescription())
+          .complianceProfile(
+            c.getComplianceProfile() != null
+              ? CompilanceProfileDTO
+                .builder()
+                .id(c.getComplianceProfile().getId())
+                .fileName(c.getComplianceProfile().getFileName())
+                .url(c.getComplianceProfile().getUrl())
+                .hash(c.getComplianceProfile().getHash())
+                .build()
+              : null
+          )
+          .complianceStandard(
+            c.getCompliancesStandard() != null
+              ? ComplianceStandardsDTO
+                .builder()
+                .id(c.getCompliancesStandard().getId())
+                .standard(c.getCompliancesStandard().getStandard())
+                .description(c.getCompliancesStandard().getDescription())
+                .build()
+              : null
+          )
           .build()
       )
       .collect(Collectors.toList());

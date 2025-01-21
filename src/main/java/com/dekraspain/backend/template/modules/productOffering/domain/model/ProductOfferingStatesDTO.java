@@ -1,5 +1,6 @@
 package com.dekraspain.backend.template.modules.productOffering.domain.model;
 
+import com.dekraspain.backend.template.modules.productOffering.application.request.CompliancesRequest;
 import com.dekraspain.backend.template.shared.customValidators.EnumValidator;
 import java.util.Date;
 import java.util.List;
@@ -22,5 +23,5 @@ public class ProductOfferingStatesDTO {
 
   private String comments;
 
-  private Optional<List<Long>> compliances;
+  private Optional<List<CompliancesRequest>> compliances;
 }
