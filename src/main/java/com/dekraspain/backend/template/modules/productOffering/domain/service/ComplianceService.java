@@ -1,7 +1,6 @@
 package com.dekraspain.backend.template.modules.productOffering.domain.service;
 
-import org.springframework.stereotype.Service;
-
+import com.dekraspain.backend.template.modules.productOffering.domain.model.ComplianceStandardsDTO;
 import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ComplianceEntity;
 import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ComplianceProfileEntity;
 import com.dekraspain.backend.template.modules.productOffering.persistence.entity.CompliancesStandarsEntity;
@@ -10,9 +9,11 @@ import com.dekraspain.backend.template.modules.productOffering.persistence.jpa.C
 import com.dekraspain.backend.template.modules.productOffering.persistence.jpa.ComplianceRepository;
 import com.dekraspain.backend.template.modules.productOffering.persistence.jpa.ComplianceStandardRepository;
 import com.dekraspain.backend.template.modules.productOffering.persistence.jpa.ProductOfferingRepository;
-
 import jakarta.persistence.EntityNotFoundException;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
@@ -53,5 +54,35 @@ public class ComplianceService {
 
     // Guardar la entidad en la base de datos
     return complianceRepository.save(compliance);
+  }
+
+  public List<ComplianceStandardsDTO> getAllCompliances() {
+    return complianceStandardRepository
+      .findAll()
+      .stream()
+      .map(cs -> {
+        return ComplianceStandardsDTO
+          .builder()
+          .id(cs.getId())
+          .standard(cs.getStandard())
+          .description(cs.getDescription())
+          .build();
+      })
+      .collect(Collectors.toList());
+  }
+
+  // Obtener compliance standards por id
+  public ComplianceStandardsDTO getComplianceStandardById(Long id) {
+    return complianceStandardRepository
+      .findById(id)
+      .map(cs ->
+        ComplianceStandardsDTO
+          .builder()
+          .id(cs.getId())
+          .standard(cs.getStandard())
+          .description(cs.getDescription())
+          .build()
+      )
+      .orElse(null);
   }
 }

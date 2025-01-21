@@ -1,8 +1,5 @@
 package com.dekraspain.backend.template.spring.security;
 
-import com.dekraspain.backend.template.modules.auth.domain.provider.AuthenticationProviderImpl;
-import com.dekraspain.backend.template.spring.Jwt.JwtAuthenticationFilter;
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -11,6 +8,11 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import com.dekraspain.backend.template.modules.auth.domain.provider.AuthenticationProviderImpl;
+import com.dekraspain.backend.template.spring.Jwt.JwtAuthenticationFilter;
+
+import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableWebSecurity
@@ -30,6 +32,8 @@ public class SpringSecurityConfig {
           .requestMatchers("/static/**")
           .permitAll()
           .requestMatchers("/api/v1/product-offering/**")
+          .authenticated()
+          .requestMatchers("/api/v1/compliance-standards/**")
           .authenticated()
           .requestMatchers("/api/v1/send-mail")
           .authenticated()
