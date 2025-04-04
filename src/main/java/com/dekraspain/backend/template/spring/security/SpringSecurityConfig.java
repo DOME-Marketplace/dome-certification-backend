@@ -1,5 +1,9 @@
 package com.dekraspain.backend.template.spring.security;
 
+import com.dekraspain.backend.template.modules.auth.domain.provider.AuthenticationProviderImpl;
+import com.dekraspain.backend.template.modules.user.domain.model.UserRole;
+import com.dekraspain.backend.template.spring.Jwt.JwtAuthenticationFilter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -8,11 +12,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
-import com.dekraspain.backend.template.modules.auth.domain.provider.AuthenticationProviderImpl;
-import com.dekraspain.backend.template.spring.Jwt.JwtAuthenticationFilter;
-
-import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableWebSecurity
@@ -47,8 +46,11 @@ public class SpringSecurityConfig {
           .permitAll()
           .requestMatchers("/swagger-ui/**")
           .permitAll()
+          .requestMatchers(HttpMethod.GET, "/auth/client-assertion-token-m2m")
+          .hasAnyAuthority(UserRole.EMPLOYEE.name(), UserRole.ADMIN.name())
           .requestMatchers("/auth/**")
           .permitAll()
+      // /auth/client-assertion-token-m2m protegido con rol de eployee
       )
       .sessionManagement(sessionManager ->
         sessionManager.sessionCreationPolicy(SessionCreationPolicy.STATELESS)

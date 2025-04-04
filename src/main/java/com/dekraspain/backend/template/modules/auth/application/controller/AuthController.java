@@ -1,20 +1,9 @@
 package com.dekraspain.backend.template.modules.auth.application.controller;
 
-import com.dekraspain.backend.template.modules.auth.application.request.LoginRequest;
-import com.dekraspain.backend.template.modules.auth.application.request.RegisterRequest;
-import com.dekraspain.backend.template.modules.auth.application.request.VerifiableCredentialPayload;
-import com.dekraspain.backend.template.modules.auth.application.response.AuthResponse;
-import com.dekraspain.backend.template.modules.auth.domain.service.AuthService;
-import com.dekraspain.backend.template.modules.user.domain.model.UserRole;
-import com.dekraspain.backend.template.modules.user.domain.service.UserService;
-import com.dekraspain.backend.template.spring.Jwt.JwtService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -26,6 +15,20 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.dekraspain.backend.template.modules.auth.application.request.LoginRequest;
+import com.dekraspain.backend.template.modules.auth.application.request.RegisterRequest;
+import com.dekraspain.backend.template.modules.auth.application.request.VerifiableCredentialPayload;
+import com.dekraspain.backend.template.modules.auth.application.response.AuthResponse;
+import com.dekraspain.backend.template.modules.auth.domain.service.AuthService;
+import com.dekraspain.backend.template.modules.user.domain.model.UserRole;
+import com.dekraspain.backend.template.modules.user.domain.service.UserService;
+import com.dekraspain.backend.template.spring.Jwt.JwtService;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @Tag(name = "Auth")
 @RestController
@@ -96,6 +99,12 @@ public class AuthController {
   @GetMapping(value = "client-assertion-token")
   public String generateClientAssertionToken() {
     return jwtService.generateClientAssertionToken();
+  }
+
+  @Operation(summary = "client-assertion-token-m2m")
+  @GetMapping(value = "client-assertion-token-m2m")
+  public String generateClientAssertionTokenM2M() {
+    return jwtService.generateClientAssertionTokenM2M();
   }
 
   @Operation(summary = "exchange-token")

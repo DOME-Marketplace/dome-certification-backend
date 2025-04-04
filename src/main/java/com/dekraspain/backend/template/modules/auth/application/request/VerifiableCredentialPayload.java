@@ -1,8 +1,10 @@
 package com.dekraspain.backend.template.modules.auth.application.request;
 
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.List;
+
 import lombok.Data;
 
 @Data
@@ -16,6 +18,7 @@ public class VerifiableCredentialPayload {
   private long iat;
   private String jti;
   private VerifiableCredential vc;
+  private String client_id;
 
   @Data
   public static class VerifiableCredential {

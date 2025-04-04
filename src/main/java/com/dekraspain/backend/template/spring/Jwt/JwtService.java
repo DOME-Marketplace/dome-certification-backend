@@ -1,5 +1,17 @@
 package com.dekraspain.backend.template.spring.Jwt;
 
+import com.dekraspain.backend.template.modules.auth.application.request.KeysContainer;
+import com.dekraspain.backend.template.modules.auth.application.request.VerifiableCredentialPayload;
+import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.Key;
 import java.security.KeyFactory;
@@ -17,27 +29,14 @@ import java.util.Base64;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
-
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
-import com.dekraspain.backend.template.modules.auth.application.request.KeysContainer;
-import com.dekraspain.backend.template.modules.auth.application.request.VerifiableCredentialPayload;
-import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
-import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -57,6 +56,9 @@ public class JwtService {
 
   @Value("${jwt.oauth.aud}")
   private String aud;
+
+  @Value("${jwt.lear.credential}")
+  private String learCredentialJwt;
 
   private final long expirationTime = 86400000;
   private final ObjectMapper objectMapper = new ObjectMapper();
@@ -150,6 +152,86 @@ public class JwtService {
         .compact();
     } catch (Exception e) {
       throw new RuntimeException("Error generating OAuth token", e);
+    }
+  }
+
+  public String generateClientAssertionTokenM2M() {
+    try {
+      String vpJwt = generateVerifiablePresentationToken();
+      String vpTokenBase64 = Base64
+        .getEncoder()
+        .encodeToString(vpJwt.getBytes(StandardCharsets.UTF_8));
+
+      Claims claims = Jwts.claims();
+      claims.put("iss", clientId);
+      claims.put("sub", clientId);
+      claims.put("aud", aud);
+      claims.put("jti", UUID.randomUUID().toString());
+      claims.put("iat", System.currentTimeMillis() / 1000);
+      claims.put("exp", (System.currentTimeMillis() + expirationTime) / 1000);
+      claims.put("vp_token", vpTokenBase64); // ✅ Base64 del JWT firmado
+
+      Map<String, Object> headerParams = new HashMap<>();
+      headerParams.put("typ", "JWT");
+      headerParams.put("kid", clientId);
+
+      return Jwts
+        .builder()
+        .setHeaderParams(headerParams)
+        .setClaims(claims)
+        .signWith(loadPrivateKey(), SignatureAlgorithm.ES256)
+        .compact();
+    } catch (Exception e) {
+      throw new RuntimeException("Error generating client assertion token", e);
+    }
+  }
+
+  public String generateVerifiablePresentationToken() {
+    try {
+      if (learCredentialJwt == null || learCredentialJwt.isEmpty()) {
+        throw new IllegalStateException(
+          "LEAR_CREDENTIAL_JWT env variable is not set"
+        );
+      }
+
+      //  Decodificar la LEARCredential del formato Base64url que te mandaron
+      // Normalizar el padding manualmente para que tenga longitud múltiplo de 4
+      String normalizedInput = learCredentialJwt;
+      int padding = 4 - (learCredentialJwt.length() % 4);
+      if (padding < 4) {
+        normalizedInput += "=".repeat(padding);
+      }
+
+      // Decodificar desde Base64url → obtener el JWT limpio
+      byte[] decodedBytes = Base64.getUrlDecoder().decode(normalizedInput);
+      String decodedLearCredentialJwt = new String(
+        decodedBytes,
+        StandardCharsets.UTF_8
+      );
+
+      long nowSeconds = System.currentTimeMillis() / 1000;
+
+      // Construir la claim VP con la credencial decodificada
+      Map<String, Object> vpClaim = new HashMap<>();
+      vpClaim.put("type", List.of("VerifiablePresentation"));
+      vpClaim.put("verifiableCredential", List.of(decodedLearCredentialJwt)); // solo un string, no array
+
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("vp", vpClaim);
+      claims.put("iss", clientId); // did de la máquina
+      claims.put("jti", UUID.randomUUID().toString());
+      claims.put("iat", nowSeconds);
+      claims.put("nbf", nowSeconds);
+      claims.put("exp", nowSeconds + 30); // 30s de validez
+
+      return Jwts
+        .builder()
+        .setHeaderParam("typ", "JWT")
+        .setClaims(claims)
+        .signWith(loadPrivateKey(), SignatureAlgorithm.ES256)
+        .compact();
+    } catch (Exception e) {
+      throw new RuntimeException("Error generating VP JWT", e);
     }
   }
 

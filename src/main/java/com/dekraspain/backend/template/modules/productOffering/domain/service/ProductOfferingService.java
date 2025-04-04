@@ -1,26 +1,5 @@
 package com.dekraspain.backend.template.modules.productOffering.domain.service;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
-import org.springframework.web.multipart.MultipartFile;
-
 import com.dekraspain.backend.template.modules.productOffering.application.request.CompliancesRequest;
 import com.dekraspain.backend.template.modules.productOffering.application.request.ProductOfferingRequest;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.CompilanceProfileDTO;
@@ -36,8 +15,26 @@ import com.dekraspain.backend.template.modules.productOffering.persistence.jpa.P
 import com.dekraspain.backend.template.modules.user.domain.model.UserDTO;
 import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
 import com.dekraspain.backend.template.shared.email.service.EmailService;
-
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -366,6 +363,7 @@ public class ProductOfferingService {
                   .id(cp.getId())
                   .fileName(cp.getFileName())
                   .url(cp.getUrl())
+                  .hash(cp.getHash())
                   .build()
               )
               .collect(Collectors.toList())
