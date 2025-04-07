@@ -194,35 +194,19 @@ public class JwtService {
         );
       }
 
-      //  Decodificar la LEARCredential del formato Base64url que te mandaron
-      // Normalizar el padding manualmente para que tenga longitud múltiplo de 4
-      String normalizedInput = learCredentialJwt;
-      int padding = 4 - (learCredentialJwt.length() % 4);
-      if (padding < 4) {
-        normalizedInput += "=".repeat(padding);
-      }
-
-      // Decodificar desde Base64url → obtener el JWT limpio
-      byte[] decodedBytes = Base64.getUrlDecoder().decode(normalizedInput);
-      String decodedLearCredentialJwt = new String(
-        decodedBytes,
-        StandardCharsets.UTF_8
-      );
-
       long nowSeconds = System.currentTimeMillis() / 1000;
 
-      // Construir la claim VP con la credencial decodificada
       Map<String, Object> vpClaim = new HashMap<>();
       vpClaim.put("type", List.of("VerifiablePresentation"));
-      vpClaim.put("verifiableCredential", List.of(decodedLearCredentialJwt)); // solo un string, no array
+      vpClaim.put("verifiableCredential", List.of(learCredentialJwt)); // JWT tal cual
 
       Map<String, Object> claims = new HashMap<>();
       claims.put("vp", vpClaim);
-      claims.put("iss", clientId); // did de la máquina
+      claims.put("iss", clientId);
       claims.put("jti", UUID.randomUUID().toString());
       claims.put("iat", nowSeconds);
       claims.put("nbf", nowSeconds);
-      claims.put("exp", nowSeconds + 30); // 30s de validez
+      claims.put("exp", nowSeconds + 30);
 
       return Jwts
         .builder()
