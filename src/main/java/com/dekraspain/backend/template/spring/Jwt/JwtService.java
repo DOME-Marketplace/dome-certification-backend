@@ -1,16 +1,5 @@
 package com.dekraspain.backend.template.spring.Jwt;
 
-import com.dekraspain.backend.template.modules.auth.application.request.KeysContainer;
-import com.dekraspain.backend.template.modules.auth.application.request.VerifiableCredentialPayload;
-import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.Key;
@@ -33,10 +22,24 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
-import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+
+import com.dekraspain.backend.template.modules.auth.application.request.KeysContainer;
+import com.dekraspain.backend.template.modules.auth.application.request.VerifiableCredentialPayload;
+import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -199,6 +202,7 @@ public class JwtService {
       Map<String, Object> vpClaim = new HashMap<>();
       vpClaim.put("type", List.of("VerifiablePresentation"));
       vpClaim.put("verifiableCredential", List.of(learCredentialJwt)); // JWT tal cual
+      System.out.println("learCredentialJwt: " + learCredentialJwt);
 
       Map<String, Object> claims = new HashMap<>();
       claims.put("vp", vpClaim);

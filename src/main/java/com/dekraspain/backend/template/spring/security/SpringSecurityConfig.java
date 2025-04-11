@@ -30,6 +30,11 @@ public class SpringSecurityConfig {
         authRequest
           .requestMatchers("/static/**")
           .permitAll()
+          .requestMatchers(
+            HttpMethod.POST,
+            "/api/v1/product-offering/issuances"
+          )
+          .hasAnyAuthority(UserRole.EMPLOYEE.name(), UserRole.ADMIN.name())
           .requestMatchers("/api/v1/product-offering/**")
           .authenticated()
           .requestMatchers("/api/v1/compliance-standards/**")
