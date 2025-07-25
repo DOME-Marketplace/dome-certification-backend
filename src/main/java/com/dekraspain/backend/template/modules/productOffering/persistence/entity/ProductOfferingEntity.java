@@ -1,6 +1,7 @@
 package com.dekraspain.backend.template.modules.productOffering.persistence.entity;
 
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingStates;
+import com.dekraspain.backend.template.modules.productOffering.domain.model.RequestedComplianceLevel;
 import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -44,6 +45,10 @@ public class ProductOfferingEntity {
   private String email_organization;
   private String VAT_ID;
   private String comments;
+
+  // Nuevo campo: Requested Compliance Level como Value Object
+  @jakarta.persistence.Embedded
+  private RequestedComplianceLevel requestedComplianceLevel;
 
   @ManyToOne(targetEntity = UserEntity.class, fetch = FetchType.LAZY)
   @JoinColumn(name = "issuer")

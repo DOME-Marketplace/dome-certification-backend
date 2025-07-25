@@ -1,10 +1,5 @@
 package com.dekraspain.backend.template.modules.auth.domain.service;
 
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-
 import com.dekraspain.backend.template.modules.auth.application.request.LoginRequest;
 import com.dekraspain.backend.template.modules.auth.application.request.RegisterRequest;
 import com.dekraspain.backend.template.modules.auth.application.request.VerifiableCredentialPayload;
@@ -14,8 +9,11 @@ import com.dekraspain.backend.template.modules.user.domain.service.AccessLogServ
 import com.dekraspain.backend.template.modules.user.domain.service.UserService;
 import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
 import com.dekraspain.backend.template.spring.Jwt.JwtService;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
@@ -51,12 +49,20 @@ public class AuthService {
       .build();
   }
 
-  public AuthResponse loginProvider(String didkey, UserRole role) {
+  public AuthResponse loginProvider(
+    String didkey,
+    UserRole role,
+    String organizationId,
+    String organizationEmail
+  ) {
     // Autenticación del usuario
 
     UserEntity user = userService.findByDidkey(didkey);
 
     UserEntity userUpdated = userService.updateRole(user, role);
+    userService.updateOrganizationId(userUpdated, organizationId);
+    userService.updateOrganizationEmail(userUpdated, organizationEmail);
+
     // Generación del token JWT
     String token = jwtService.getToken(userUpdated);
 
@@ -74,7 +80,9 @@ public class AuthService {
   public AuthResponse loginProviderAndUpdate(
     String email,
     String didkey,
-    UserRole role
+    UserRole role,
+    String organizationId,
+    String organizationEmail
   ) {
     // Obtención del usuario mediante el UserService
     UserEntity user = userService.findByEmail(email);
@@ -84,7 +92,8 @@ public class AuthService {
       didkey,
       role
     );
-
+    userService.updateOrganizationId(userUpdated, organizationId);
+    userService.updateOrganizationEmail(userUpdated, organizationEmail);
     // Generación del token JWT
     String token = jwtService.getToken(userUpdated);
 
@@ -111,7 +120,9 @@ public class AuthService {
       credentialSubject.getMandate().getMandator().getCountry(),
       credentialSubject.getMandate().getMandator().getOrganization(),
       credentialSubject.getMandate().getMandatee().getId(),
-      role
+      role,
+      credentialSubject.getMandate().getMandator().getOrganizationIdentifier(),
+      credentialSubject.getMandate().getMandator().getEmailAddress()
     );
 
     // Generación del token JWT

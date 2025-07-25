@@ -1,9 +1,20 @@
 package com.dekraspain.backend.template.modules.auth.application.controller;
 
+import com.dekraspain.backend.template.modules.auth.application.request.LoginRequest;
+import com.dekraspain.backend.template.modules.auth.application.request.RegisterRequest;
+import com.dekraspain.backend.template.modules.auth.application.request.VerifiableCredentialPayload;
+import com.dekraspain.backend.template.modules.auth.application.response.AuthResponse;
+import com.dekraspain.backend.template.modules.auth.domain.service.AuthService;
+import com.dekraspain.backend.template.modules.user.domain.model.UserRole;
+import com.dekraspain.backend.template.modules.user.domain.service.UserService;
+import com.dekraspain.backend.template.spring.Jwt.JwtService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -15,20 +26,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-
-import com.dekraspain.backend.template.modules.auth.application.request.LoginRequest;
-import com.dekraspain.backend.template.modules.auth.application.request.RegisterRequest;
-import com.dekraspain.backend.template.modules.auth.application.request.VerifiableCredentialPayload;
-import com.dekraspain.backend.template.modules.auth.application.response.AuthResponse;
-import com.dekraspain.backend.template.modules.auth.domain.service.AuthService;
-import com.dekraspain.backend.template.modules.user.domain.model.UserRole;
-import com.dekraspain.backend.template.modules.user.domain.service.UserService;
-import com.dekraspain.backend.template.spring.Jwt.JwtService;
-
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 
 @Tag(name = "Auth")
 @RestController
@@ -123,18 +120,22 @@ public class AuthController {
         .getVc()
         .getCredentialSubject();
 
+      VerifiableCredentialPayload.Mandate mandate = credentialSubject.getMandate();
+
       VerifiableCredentialPayload.Mandatee mandatee = credentialSubject
         .getMandate()
         .getMandatee();
 
+      VerifiableCredentialPayload.Mandator mandator = credentialSubject
+        .getMandate()
+        .getMandator();
+
       // Validar que los datos requeridos no sean nulos
-      if (credentialSubject == null || credentialSubject.getMandate() == null) {
+      if (credentialSubject == null || mandate == null) {
         throw new IllegalArgumentException("Mandate data is required");
       }
 
-      List<VerifiableCredentialPayload.Power> power = credentialSubject
-        .getMandate()
-        .getPower();
+      List<VerifiableCredentialPayload.Power> power = mandate.getPower();
 
       // Determinar el rol del usuario
       UserRole role = (
@@ -150,7 +151,12 @@ public class AuthController {
       // Si el didkey ya existe, proceder con el logins
       if (userService.existsByDidkey(mandatee.getId())) {
         return ResponseEntity.ok(
-          authService.loginProvider(mandatee.getId(), role)
+          authService.loginProvider(
+            mandatee.getId(),
+            role,
+            mandator.getOrganizationIdentifier(),
+            mandator.getEmailAddress()
+          )
         );
       }
 
@@ -160,7 +166,9 @@ public class AuthController {
           authService.loginProviderAndUpdate(
             mandatee.getEmail(),
             mandatee.getId(),
-            role
+            role,
+            mandator.getOrganizationIdentifier(),
+            mandator.getEmailAddress()
           )
         );
       }

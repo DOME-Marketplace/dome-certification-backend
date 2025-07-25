@@ -1,17 +1,14 @@
 package com.dekraspain.backend.template.modules.user.domain.service;
 
-import java.util.Date;
-import java.util.UUID;
-
-import org.springframework.stereotype.Service;
-
 import com.dekraspain.backend.template.modules.user.domain.model.UserDTO;
 import com.dekraspain.backend.template.modules.user.domain.model.UserRole;
 import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
 import com.dekraspain.backend.template.modules.user.persistence.jpa.UserRepository;
-
 import jakarta.transaction.Transactional;
+import java.util.Date;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
@@ -55,7 +52,9 @@ public class UserService {
     String countryCode,
     String organizationName,
     String didkey,
-    UserRole role
+    UserRole role,
+    String organization_id,
+    String organization_email
   ) {
     UserEntity userEntity = UserEntity
       .builder()
@@ -66,6 +65,8 @@ public class UserService {
       .organization_name(organizationName)
       .role(role)
       .didkey(didkey)
+      .organization_id(organization_id)
+      .organization_email(organization_email)
       .last_seen(new Date())
       .build();
 
@@ -115,12 +116,13 @@ public class UserService {
       .username(user.getUsername())
       .firstname(user.getFirstname())
       .lastname(user.getLastname())
-      .country_code(user.getCountry_code())
-      .address(user.getAddress())
+      .organization_country_code(user.getCountry_code())
       .organization_name(user.getOrganization_name())
-      .website(user.getWebsite())
+      .organization_id(user.getOrganization_id())
+      .email(user.getEmail())
       .last_seen(user.getLast_seen())
       .role(user.getRole())
+      .organization_email(user.getOrganization_email())
       .build();
   }
 
@@ -156,6 +158,22 @@ public class UserService {
 
   public UserEntity updateRole(UserEntity user, UserRole role) {
     user.setRole(role);
+    return userRepository.save(user);
+  }
+
+  public UserEntity updateOrganizationId(
+    UserEntity user,
+    String organizationId
+  ) {
+    user.setOrganization_id(organizationId);
+    return userRepository.save(user);
+  }
+
+  public UserEntity updateOrganizationEmail(
+    UserEntity user,
+    String organizationEmail
+  ) {
+    user.setOrganization_email(organizationEmail);
     return userRepository.save(user);
   }
 }

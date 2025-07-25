@@ -145,7 +145,6 @@ public class ProductOfferingController {
       )
       .collect(Collectors.toList());
 
-    // Verificación si issuer es null
     UserDTO issuerDTO = null;
     if (issuer != null) {
       issuerDTO =
@@ -155,10 +154,9 @@ public class ProductOfferingController {
           .username(issuer.getUsername())
           .firstname(issuer.getFirstname())
           .lastname(issuer.getLastname())
-          .address(issuer.getAddress())
-          .country_code(issuer.getCountry_code())
+          .email(issuer.getEmail())
+          .organization_country_code(issuer.getCountry_code())
           .organization_name(issuer.getOrganization_name())
-          .website(issuer.getWebsite())
           .last_seen(issuer.getLast_seen())
           .build();
     }
@@ -172,10 +170,12 @@ public class ProductOfferingController {
           .username(productOffering.getUser().getUsername())
           .firstname(productOffering.getUser().getFirstname())
           .lastname(productOffering.getUser().getLastname())
-          .address(productOffering.getUser().getAddress())
-          .country_code(productOffering.getUser().getCountry_code())
+          .email(productOffering.getUser().getEmail())
+          .organization_country_code(
+            productOffering.getUser().getCountry_code()
+          )
           .organization_name(productOffering.getUser().getOrganization_name())
-          .website(productOffering.getUser().getWebsite())
+          .organization_id(productOffering.getUser().getOrganization_id())
           .last_seen(productOffering.getUser().getLast_seen())
           .build();
     }
@@ -203,6 +203,7 @@ public class ProductOfferingController {
       .image(productOffering.getImage())
       .complianceProfiles(complianceProfileDTOs)
       .compliances(compliances)
+      .requestedComplianceLevel(productOffering.getRequestedComplianceLevel())
       .build();
 
     return ResponseEntity.ok().body(productOfferingDTO);
@@ -219,6 +220,7 @@ public class ProductOfferingController {
     @RequestPart("email_organization") String emailOrganization,
     @RequestPart("VAT_ID") String vatId,
     @RequestPart("id_PO") String idPo,
+    @RequestPart("requested_compliances_level") String compliancesLevel,
     @RequestPart("files") List<MultipartFile> files
   ) {
     try {
@@ -233,6 +235,7 @@ public class ProductOfferingController {
         .email_organization(emailOrganization)
         .VAT_ID(vatId)
         .id_PO(idPo)
+        .requested_compliances_level(compliancesLevel)
         .build();
 
       productService.createProductOffering(request, files);

@@ -31,6 +31,8 @@ public class ProductOfferingDTO {
   public String image;
   public List<ComplianceDTO> compliances;
 
+  public RequestedComplianceLevel requestedComplianceLevel;
+
   @EnumValidator(enumClass = ProductOfferingStates.class)
   public ProductOfferingStates status;
 

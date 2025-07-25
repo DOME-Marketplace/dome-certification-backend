@@ -8,6 +8,7 @@ import com.dekraspain.backend.template.modules.productOffering.domain.model.Comp
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingDTO;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingStates;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingStatesDTO;
+import com.dekraspain.backend.template.modules.productOffering.domain.model.RequestedComplianceLevel;
 import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ComplianceProfileEntity;
 import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ProductOfferingEntity;
 import com.dekraspain.backend.template.modules.productOffering.persistence.jpa.ComplianceProfileRepository;
@@ -83,6 +84,9 @@ public class ProductOfferingService {
       .expiration_date(null)
       .isExpirationEmailSent(false)
       .isExpirationWarningEmailSent(false)
+      .requestedComplianceLevel(
+        new RequestedComplianceLevel(request.getRequested_compliances_level())
+      )
       .build();
 
     productOfferingRepository.save(productOffering);
@@ -186,13 +190,13 @@ public class ProductOfferingService {
           .builder()
           .id(issuer.getId().toString())
           .username(issuer.getUsername())
+          .email(user.getEmail())
           .firstname(issuer.getFirstname())
           .lastname(issuer.getLastname())
-          .country_code(issuer.getCountry_code())
+          .organization_country_code(issuer.getCountry_code())
           .last_seen(issuer.getLast_seen())
-          .address(issuer.getAddress())
           .organization_name(issuer.getOrganization_name())
-          .website(issuer.getWebsite())
+          .organization_id(issuer.getOrganization_id())
           .build();
     }
 
@@ -202,14 +206,14 @@ public class ProductOfferingService {
         UserDTO
           .builder()
           .id(user.getId().toString())
+          .email(user.getEmail())
           .username(user.getUsername())
           .firstname(user.getFirstname())
           .lastname(user.getLastname())
-          .country_code(user.getCountry_code())
           .last_seen(user.getLast_seen())
-          .address(user.getAddress())
+          .organization_country_code(user.getCountry_code())
           .organization_name(user.getOrganization_name())
-          .website(user.getWebsite())
+          .organization_id(issuer.getOrganization_id())
           .build();
     }
 
@@ -281,6 +285,9 @@ public class ProductOfferingService {
       .image(updatedProductOffering.getImage())
       .complianceProfiles(complianceProfileDTOs)
       .compliances(compliances)
+      .requestedComplianceLevel(
+        updatedProductOffering.getRequestedComplianceLevel()
+      )
       .build();
   }
 
@@ -308,13 +315,14 @@ public class ProductOfferingService {
               .username(productOffering.getIssuer().getUsername())
               .firstname(productOffering.getIssuer().getFirstname())
               .lastname(productOffering.getIssuer().getLastname())
-              .country_code(productOffering.getIssuer().getCountry_code())
+              .organization_country_code(
+                productOffering.getIssuer().getCountry_code()
+              )
+              .organization_id(productOffering.getIssuer().getOrganization_id())
               .last_seen(productOffering.getIssuer().getLast_seen())
-              .address(productOffering.getIssuer().getAddress())
               .organization_name(
                 productOffering.getIssuer().getOrganization_name()
               )
-              .website(productOffering.getIssuer().getWebsite())
               .build();
         }
 
@@ -327,13 +335,14 @@ public class ProductOfferingService {
               .username(productOffering.getUser().getUsername())
               .firstname(productOffering.getUser().getFirstname())
               .lastname(productOffering.getUser().getLastname())
-              .country_code(productOffering.getUser().getCountry_code())
+              .organization_country_code(
+                productOffering.getUser().getCountry_code()
+              )
               .last_seen(productOffering.getUser().getLast_seen())
-              .address(productOffering.getUser().getAddress())
+              .organization_id(productOffering.getUser().getOrganization_id())
               .organization_name(
                 productOffering.getUser().getOrganization_name()
               )
-              .website(productOffering.getUser().getWebsite())
               .build();
         }
 
@@ -353,6 +362,9 @@ public class ProductOfferingService {
           .status(productOffering.getStatus())
           .issuer(issuerDTO)
           .user(userDTO)
+          .requestedComplianceLevel(
+            productOffering.getRequestedComplianceLevel()
+          )
           .complianceProfiles(
             productOffering
               .getComplianceProfiles()
@@ -446,13 +458,16 @@ public class ProductOfferingService {
                 .username(productOffering.getIssuer().getUsername())
                 .firstname(productOffering.getIssuer().getFirstname())
                 .lastname(productOffering.getIssuer().getLastname())
-                .country_code(productOffering.getIssuer().getCountry_code())
+                .organization_country_code(
+                  productOffering.getIssuer().getCountry_code()
+                )
                 .last_seen(productOffering.getIssuer().getLast_seen())
-                .address(productOffering.getIssuer().getAddress())
                 .organization_name(
                   productOffering.getIssuer().getOrganization_name()
                 )
-                .website(productOffering.getIssuer().getWebsite())
+                .organization_id(
+                  productOffering.getIssuer().getOrganization_id()
+                )
                 .build()
               : null
           )
@@ -464,13 +479,14 @@ public class ProductOfferingService {
                 .username(productOffering.getUser().getUsername())
                 .firstname(productOffering.getUser().getFirstname())
                 .lastname(productOffering.getUser().getLastname())
-                .country_code(productOffering.getUser().getCountry_code())
+                .organization_country_code(
+                  productOffering.getUser().getCountry_code()
+                )
                 .last_seen(productOffering.getUser().getLast_seen())
-                .address(productOffering.getUser().getAddress())
                 .organization_name(
                   productOffering.getUser().getOrganization_name()
                 )
-                .website(productOffering.getUser().getWebsite())
+                .organization_id(productOffering.getUser().getOrganization_id())
                 .build()
               : null
           )
