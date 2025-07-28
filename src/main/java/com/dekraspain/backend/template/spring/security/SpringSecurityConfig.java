@@ -18,6 +18,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SpringSecurityConfig {
 
+  private static final String BASE_PATH_V1 = "/api/v1";
+
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
   private final AuthenticationProviderImpl authProvider;
 
@@ -32,16 +34,18 @@ public class SpringSecurityConfig {
           .permitAll()
           .requestMatchers(
             HttpMethod.POST,
-            "/api/v1/product-offering/issuances"
+            BASE_PATH_V1 + "/product-offering/issuances"
           )
           .hasAnyAuthority(UserRole.EMPLOYEE.name(), UserRole.ADMIN.name())
-          .requestMatchers("/api/v1/product-offering/**")
+          .requestMatchers(BASE_PATH_V1 + "/product-offering/**")
           .authenticated()
-          .requestMatchers("/api/v1/compliance-standards/**")
+          .requestMatchers(BASE_PATH_V1 + "/compliance-standards/**")
           .authenticated()
-          .requestMatchers("/api/v1/send-mail")
+          .requestMatchers(BASE_PATH_V1 + "/compliances-criteria/**")
           .authenticated()
-          .requestMatchers(HttpMethod.GET, "/api/v1/user/**")
+          .requestMatchers(BASE_PATH_V1 + "/send-mail")
+          .authenticated()
+          .requestMatchers(HttpMethod.GET, BASE_PATH_V1 + "/user/**")
           .authenticated()
           .requestMatchers(HttpMethod.OPTIONS)
           .permitAll()
