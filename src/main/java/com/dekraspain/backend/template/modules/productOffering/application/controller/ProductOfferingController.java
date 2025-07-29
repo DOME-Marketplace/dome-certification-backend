@@ -1,6 +1,7 @@
 package com.dekraspain.backend.template.modules.productOffering.application.controller;
 
 import com.dekraspain.backend.template.modules.productOffering.application.request.IssuanceRequest;
+import com.dekraspain.backend.template.modules.productOffering.application.request.LabelCredentialRequest;
 import com.dekraspain.backend.template.modules.productOffering.application.request.ProductOfferingRequest;
 import com.dekraspain.backend.template.modules.productOffering.application.response.VerifierTokenResponse;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.CompilanceProfileDTO;
@@ -449,6 +450,16 @@ public class ProductOfferingController {
   public ResponseEntity<List<Long>> checkWarningExpirationManually() {
     return ResponseEntity.ok(productService.checkProductWaringExpiration());
   }
+
+  @PostMapping("/generate-label-credential")
+  public ResponseEntity<?> generateLabelCredential(@RequestBody LabelCredentialRequest request) {
+   
+      
+      return ResponseEntity
+        .status(HttpStatus.NOT_IMPLEMENTED)
+        .body("Not implemented yet");
+  }
+  
 
   @PostMapping("/issuances")
   public ResponseEntity<?> issueCertificate(
