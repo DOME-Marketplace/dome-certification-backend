@@ -202,7 +202,7 @@ public class JwtService {
       Map<String, Object> vpClaim = new HashMap<>();
       vpClaim.put("type", List.of("VerifiablePresentation"));
       vpClaim.put("verifiableCredential", List.of(learCredentialJwt)); // JWT tal cual
-      System.out.println("learCredentialJwt: " + learCredentialJwt);
+      // System.out.println("learCredentialJwt: " + learCredentialJwt);
 
       Map<String, Object> claims = new HashMap<>();
       claims.put("vp", vpClaim);

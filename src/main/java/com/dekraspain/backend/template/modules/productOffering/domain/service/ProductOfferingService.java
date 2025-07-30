@@ -25,7 +25,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -47,7 +46,6 @@ public class ProductOfferingService {
   private final ProductOfferingRepository productOfferingRepository;
   private final ComplianceProfileRepository complianceProfileRepository;
   private final EmailService emailService;
-  private final ComplianceService complianceService;
 
   private static final Logger logger = LoggerFactory.getLogger(
     ProductOfferingService.class
@@ -68,6 +66,7 @@ public class ProductOfferingService {
 
     ProductOfferingEntity productOffering = ProductOfferingEntity
       .builder()
+      
       .service_name(request.getService_name())
       .service_version(request.getService_version())
       .name_organization(request.getName_organization())
@@ -166,14 +165,14 @@ public class ProductOfferingService {
       existingProductOffering.setIssuer(user);
       existingProductOffering.setExpiration_date(request.getExpiration_date());
 
-      Optional<List<CompliancesRequest>> compliances = request.getCompliances();
+      // Optional<List<CompliancesRequest>> compliances = request.getCompliances();
 
-      for (CompliancesRequest compliance : compliances.get()) {
-        Long profileIdLong = compliance.getProfileId();
-        Long standardId = compliance.getStandardId();
+      // for (CompliancesRequest compliance : compliances.get()) {
+      //   Long profileIdLong = compliance.getProfileId();
+      //   Long standardId = compliance.getStandardId();
 
-        complianceService.createCompliance(standardId, profileIdLong, id);
-      }
+      //   complianceService.createCompliance(standardId, profileIdLong, id);
+      // }
     }
     existingProductOffering.setStatus(request.getStatus());
 

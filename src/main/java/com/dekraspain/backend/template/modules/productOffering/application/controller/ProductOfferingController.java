@@ -7,9 +7,11 @@ import com.dekraspain.backend.template.modules.productOffering.application.respo
 import com.dekraspain.backend.template.modules.productOffering.domain.model.CompilanceProfileDTO;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ComplianceDTO;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ComplianceStandardsDTO;
+import com.dekraspain.backend.template.modules.productOffering.domain.model.LabelCredentialPayloadDTO;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingDTO;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingStates;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingStatesDTO;
+import com.dekraspain.backend.template.modules.productOffering.domain.service.LabelCredentialService;
 import com.dekraspain.backend.template.modules.productOffering.domain.service.ProductOfferingService;
 import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ComplianceProfileEntity;
 import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ProductOfferingEntity;
@@ -31,12 +33,15 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -64,6 +69,7 @@ public class ProductOfferingController {
   private final EmailService emailService;
   private final JwtService jwtService;
   private final RestTemplate restTemplate;
+  private final LabelCredentialService labelCredentialService;
 
   @Value("${jwt.oauth.client-id}")
   private String clientId;
@@ -453,11 +459,141 @@ public class ProductOfferingController {
 
   @PostMapping("/generate-label-credential")
   public ResponseEntity<?> generateLabelCredential(@RequestBody LabelCredentialRequest request) {
-   
-      
+      Authentication authentication = SecurityContextHolder
+      .getContext()
+      .getAuthentication();
+    UserEntity user = (UserEntity) authentication.getPrincipal();
+
+    if (user == null) {
       return ResponseEntity
-        .status(HttpStatus.NOT_IMPLEMENTED)
-        .body("Not implemented yet");
+        .status(HttpStatus.UNAUTHORIZED)
+        .body("User not authenticated");
+    }
+
+    try {
+      LabelCredentialPayloadDTO labelCredentialPayload = labelCredentialService.generateLabelCredentialPayload(
+        request.getPoId(),
+        request.getPayload(),
+        user,
+        request.getValidUntil()
+      );
+
+ 
+       String client_assertion = jwtService.generateClientAssertionTokenM2M();
+      HttpHeaders tokenHeaders = new HttpHeaders();
+      tokenHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+      MultiValueMap<String, String> verifierTokenBody = new LinkedMultiValueMap<>();
+      verifierTokenBody.add("client_id", clientId);
+      verifierTokenBody.add("grant_type", "client_credentials");
+      verifierTokenBody.add(
+        "client_assertion_type",
+        "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+      );
+      verifierTokenBody.add("client_assertion", client_assertion);
+
+      
+      HttpEntity<MultiValueMap<String, String>> tokenRequest = new HttpEntity<>(
+        verifierTokenBody,
+        tokenHeaders
+      );
+
+      ResponseEntity<VerifierTokenResponse> tokenResponse = restTemplate.postForEntity(
+        verifierUrl + "/oidc/token",
+        tokenRequest,
+        VerifierTokenResponse.class
+      );
+
+            VerifierTokenResponse tokenBody = tokenResponse.getBody();
+      if (tokenBody == null || tokenBody.getAccess_token() == null) {
+        log.info("Missing access_token in verifier response");
+        return ResponseEntity
+          .status(HttpStatus.BAD_GATEWAY)
+          .body("Missing access token");
+      }
+
+      
+      String accessToken = tokenBody.getAccess_token();
+
+
+      // 1. Enviar al issuer
+      HttpHeaders headers = new HttpHeaders();
+      headers.setBearerAuth(accessToken);
+      headers.set("X-ID-TOKEN", request.getIdToken());
+      headers.setContentType(MediaType.APPLICATION_JSON);
+
+      Map<String, Object> body = Map.of(
+        "schema", "gx:LabelCredential",
+        "operation_mode", "S",
+        "format", "jwt_vc_json",
+        "payload", labelCredentialPayload,
+        "credential_owner_email", request.getCredential_owner_email() ,
+        "response_uri",request.getResponse_uri()
+
+      );
+
+                 // Mostrar el payload en formato JSON
+      try {
+        ObjectMapper mapper = new ObjectMapper();
+        String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(body);
+        log.info("Generated body for issuer (JSON):\n{}", json);
+      } catch (Exception e) {
+        log.warn("No se pudo serializar el payload a JSON", e);
+      }
+
+      // print accessToken
+      // log.info("Access Token: {}", accessToken);
+
+
+      HttpEntity <Map<String, Object>> httpEntity = new HttpEntity<>(
+        body,
+        headers
+      );
+
+      ResponseEntity<String> issuerResponse = restTemplate.postForEntity(
+        issuerUrl + "/issuer-api/vci/v1/issuances/external",
+        httpEntity,
+        String.class
+      );
+
+      log.info(
+        "Issuer responded with status: {}",
+        issuerResponse.getStatusCode()
+      );
+      log.info("Issuer response body: {}", issuerResponse.getBody());
+
+         // Si la respuesta no es 2xx, propagamos el error
+      if (!issuerResponse.getStatusCode().is2xxSuccessful()) {
+        return ResponseEntity
+          .status(issuerResponse.getStatusCode())
+          .body(issuerResponse.getBody());
+      }
+
+         // 2. Actualizar PO si hay `poId` y `data`
+      if (request.getPoId() != null && request.getData() != null) {
+        productService.updateStatusProductOffering(
+          request.getPoId(),
+          request.getData()
+        );
+      }
+
+
+      
+          return ResponseEntity
+        .status(issuerResponse.getStatusCode())
+        .body(issuerResponse.getBody());
+    } catch (HttpClientErrorException ex) {
+      log.info("HTTP error from external service", ex);
+      return ResponseEntity
+        .status(ex.getStatusCode())
+        .body(ex.getResponseBodyAsString());
+    } catch (RestClientException e) {
+      log.info("Error issuing certificate", e);
+      return ResponseEntity
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .body("Error issuing certificate");
+    }
+    
   }
   
 
