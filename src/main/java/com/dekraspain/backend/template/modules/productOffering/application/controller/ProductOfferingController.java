@@ -12,8 +12,10 @@ import com.dekraspain.backend.template.modules.productOffering.domain.model.Prod
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingStates;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingStatesDTO;
 import com.dekraspain.backend.template.modules.productOffering.domain.service.LabelCredentialService;
+import com.dekraspain.backend.template.modules.productOffering.domain.service.ProductOfferingComplianceProfileCriteriaService;
 import com.dekraspain.backend.template.modules.productOffering.domain.service.ProductOfferingService;
 import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ComplianceProfileEntity;
+import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ProductOfferingComplianceProfileCriteriaEntity;
 import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ProductOfferingEntity;
 import com.dekraspain.backend.template.modules.productOffering.persistence.jpa.ComplianceProfileRepository;
 import com.dekraspain.backend.template.modules.user.domain.model.UserDTO;
@@ -70,6 +72,7 @@ public class ProductOfferingController {
   private final JwtService jwtService;
   private final RestTemplate restTemplate;
   private final LabelCredentialService labelCredentialService;
+  private final ProductOfferingComplianceProfileCriteriaService poCriteriaService;
 
   @Value("${jwt.oauth.client-id}")
   private String clientId;
@@ -576,7 +579,14 @@ public class ProductOfferingController {
           request.getData()
         );
       }
-
+      // Guardar los criterios validados usando el servicio
+      if (request.getPayload() != null) {
+        poCriteriaService.saveValidatedCriteria(
+          productService.getProductOfferingById(request.getPoId()),
+          request.getPayload(),
+          user
+        );
+      }
 
       
           return ResponseEntity

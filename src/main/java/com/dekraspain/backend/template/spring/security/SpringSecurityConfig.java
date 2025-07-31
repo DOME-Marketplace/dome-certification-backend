@@ -37,6 +37,10 @@ public class SpringSecurityConfig {
             BASE_PATH_V1 + "/product-offering/issuances"
           )
           .hasAnyAuthority(UserRole.EMPLOYEE.name(), UserRole.ADMIN.name())
+          .requestMatchers(HttpMethod.GET, BASE_PATH_V1 + "/compliances/by-product/**")
+          .authenticated()
+          .requestMatchers(HttpMethod.GET, BASE_PATH_V1 + "/external-product-offering/**")
+          .authenticated()
           .requestMatchers(BASE_PATH_V1 + "/product-offering/**")
           .authenticated()
           .requestMatchers(BASE_PATH_V1 + "/compliance-standards/**")

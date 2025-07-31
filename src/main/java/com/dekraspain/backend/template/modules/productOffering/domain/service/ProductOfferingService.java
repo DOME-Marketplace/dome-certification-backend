@@ -449,6 +449,7 @@ public class ProductOfferingService {
           .VAT_ID(productOffering.getVAT_ID())
           .comments(productOffering.getComments())
           .status(productOffering.getStatus())
+          .requestedComplianceLevel(productOffering.getRequestedComplianceLevel())
           .issuer(
             productOffering.getIssuer() != null
               ? UserDTO
