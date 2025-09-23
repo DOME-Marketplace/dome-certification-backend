@@ -22,6 +22,7 @@ public class SpringSecurityConfig {
 
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
   private final AuthenticationProviderImpl authProvider;
+  private final com.dekraspain.backend.template.spring.security.M2MTokenVerifier m2mTokenVerifier;
 
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http)
@@ -31,6 +32,10 @@ public class SpringSecurityConfig {
       .authorizeHttpRequests(authRequest ->
         authRequest
           .requestMatchers("/static/**")
+          .permitAll()
+          // Allow the M2M create endpoint to be processed by the M2M filter.
+          // The filter itself will return 401 if the M2M token is missing/invalid.
+          .requestMatchers(HttpMethod.POST, BASE_PATH_V1 + "/product-offering/certificate")
           .permitAll()
           .requestMatchers(
             HttpMethod.POST,
@@ -73,6 +78,16 @@ public class SpringSecurityConfig {
         jwtAuthenticationFilter,
         UsernamePasswordAuthenticationFilter.class
       )
+      // M2M filter should run before the JWT filter so it can authenticate machine clients
+      .addFilterBefore(
+        m2mAuthenticationFilter(),
+        JwtAuthenticationFilter.class
+      )
       .build();
+  }
+
+  @Bean
+  public M2MAuthenticationFilter m2mAuthenticationFilter() {
+    return new M2MAuthenticationFilter(m2mTokenVerifier);
   }
 }

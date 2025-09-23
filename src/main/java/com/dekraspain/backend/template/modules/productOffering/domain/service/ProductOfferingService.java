@@ -119,6 +119,67 @@ public class ProductOfferingService {
       complianceProfileRepository.save(complianceProfile);
     }
   }
+  public void createProductOfferingM2M(
+    ProductOfferingRequest request,
+    List<MultipartFile> files
+  ) throws IOException {
+
+
+    ProductOfferingEntity productOffering = ProductOfferingEntity
+      .builder()
+      .service_name(request.getService_name())
+      .service_version(request.getService_version())
+      .name_organization(request.getName_organization())
+      .address_organization(request.getAddress_organization())
+      .ISO_Country_Code(request.getISO_Country_Code())
+      .url_organization(request.getUrl_organization())
+      .email_organization(request.getEmail_organization())
+      .id_PO(request.getId_PO())
+      .user(null)
+      .status(ProductOfferingStates.IN_PROGRESS)
+      .VAT_ID(request.getVAT_ID())
+      .request_date(new Date())
+      .issue_date(null)
+      .expiration_date(null)
+      .isExpirationEmailSent(false)
+      .isExpirationWarningEmailSent(false)
+      .requestedComplianceLevel(
+        new RequestedComplianceLevel(request.getRequested_compliances_level())
+      )
+      .build();
+
+    productOfferingRepository.save(productOffering);
+
+    Path uploadPath = Paths.get(uploadDir);
+    if (!Files.exists(uploadPath)) {
+      Files.createDirectories(uploadPath);
+    }
+
+    for (MultipartFile file : files) {
+      String fileHash = calculateFileHash(file);
+      // Guardar el archivo en el almacenamiento de Spring Boot
+      String fileName = StringUtils.cleanPath(file.getOriginalFilename());
+      Path staticFilePath = uploadPath.resolve(fileName);
+      Files.copy(
+        file.getInputStream(),
+        staticFilePath,
+        StandardCopyOption.REPLACE_EXISTING
+      );
+
+      String fileDownloadUri = uploadDir + "/" + fileName;
+      // Crear una nueva instancia de ComplianceProfileEntity para almacenar el archivo
+      ComplianceProfileEntity complianceProfile = ComplianceProfileEntity
+        .builder()
+        .fileName(fileName)
+        .productOffering(productOffering)
+        .url(fileDownloadUri)
+        .hash(fileHash)
+        .build();
+
+      // Guardar el ComplianceProfileEntity en la base de datos
+      complianceProfileRepository.save(complianceProfile);
+    }
+  }
 
   private String calculateFileHash(MultipartFile file) throws IOException {
     try {

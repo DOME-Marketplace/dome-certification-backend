@@ -302,6 +302,91 @@ public class ProductOfferingController {
     }
   }
 
+  @PostMapping("/certificate")
+  public ResponseEntity<ApiResponse<Void>> createProductOfferingM2M(
+    @RequestPart("product_specification_id") String idPo,
+    @RequestPart("service_name") String serviceName,
+    @RequestPart("service_version") String serviceVersion,
+    @RequestPart("organization_name") String nameOrganization,
+    @RequestPart("organization_address") String addressOrganization,
+    @RequestPart("organization_country") String isoCountryCode,
+    @RequestPart("organization_email") String emailOrganization,
+    @RequestPart("organization_url") String urlOrganization,
+    @RequestPart("organization_vat_id") String vatId,
+    @RequestPart("requested_compliances_level") String compliancesLevel,
+    @RequestPart("files") List<MultipartFile> files
+  ) {
+    try {
+      // Log entry and current principal to help identify authentication path (M2M vs user JWT)
+      Authentication currentAuth = SecurityContextHolder.getContext().getAuthentication();
+      if (currentAuth != null) {
+        log.info("certificate called - current authentication principal: {} authorities: {}", currentAuth.getPrincipal(), currentAuth.getAuthorities());
+      } else {
+        log.info("certificate called - no authentication in SecurityContext");
+      }
+//  
+      ProductOfferingRequest request = ProductOfferingRequest
+        .builder()
+        .service_name(serviceName)
+        .service_version(serviceVersion)
+        .name_organization(nameOrganization)
+        .address_organization(addressOrganization)
+        .ISO_Country_Code(isoCountryCode)
+        .url_organization(urlOrganization)
+        .email_organization(emailOrganization)
+        .VAT_ID(vatId)
+        .id_PO(idPo)
+        .requested_compliances_level(compliancesLevel)
+        .build();
+
+      productService.createProductOfferingM2M(request, files);
+      
+      String emailSubject =
+      "Compliance of " + serviceName + " " + serviceVersion + " created";
+      
+
+      try {
+        emailService.sendEmailWithTemplateNoContext(
+          emailOrganization,
+          emailSubject,
+          "email-in_progress"
+        );
+      } catch (Exception e) {
+        // Log the error but don't propagate it
+        log.warn("Error sending email to: {}", emailOrganization, e);
+      }
+
+      return ResponseEntity
+        .status(HttpStatus.CREATED)
+        .body(
+          new ApiResponse<>(
+            HttpStatus.CREATED.value(),
+            null
+          )
+        );
+    } catch (IOException e) {
+      return ResponseEntity
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .body(
+          new ApiResponse<>(
+            HttpStatus.INTERNAL_SERVER_ERROR.value(),
+            null
+          )
+        );
+    } catch (Exception e) {
+      // Catch any other unexpected exceptions and log them
+      log.error("Unexpected error occurred", e);
+      return ResponseEntity
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .body(
+          new ApiResponse<>(
+            HttpStatus.INTERNAL_SERVER_ERROR.value(),
+            "Unexpected error"
+          )
+        );
+    }
+  }
+
   @PostMapping("/status-PO/{id}")
   public ResponseEntity<ProductOfferingDTO> validatePO(
     @PathVariable Long id,
@@ -522,6 +607,7 @@ public class ProductOfferingController {
       }
 
       String accessToken = tokenBody.getAccess_token();
+      log.info("M2M Token: {}", accessToken);
 
       // 1. Enviar al issuer
       HttpHeaders headers = new HttpHeaders();
@@ -707,3 +793,4 @@ public class ProductOfferingController {
     }
   }
 }
+
