@@ -66,7 +66,6 @@ public class ProductOfferingService {
 
     ProductOfferingEntity productOffering = ProductOfferingEntity
       .builder()
-      
       .service_name(request.getService_name())
       .service_version(request.getService_version())
       .name_organization(request.getName_organization())
@@ -164,7 +163,6 @@ public class ProductOfferingService {
       existingProductOffering.setIssue_date(new Date());
       existingProductOffering.setIssuer(user);
       existingProductOffering.setExpiration_date(request.getExpiration_date());
-
       // Optional<List<CompliancesRequest>> compliances = request.getCompliances();
 
       // for (CompliancesRequest compliance : compliances.get()) {
@@ -180,7 +178,6 @@ public class ProductOfferingService {
       existingProductOffering
     );
 
-    // Verificación si issuer es null
     UserEntity issuer = updatedProductOffering.getIssuer();
     UserDTO issuerDTO = null;
     if (issuer != null) {
@@ -331,6 +328,7 @@ public class ProductOfferingService {
             UserDTO
               .builder()
               .id(productOffering.getUser().getId().toString())
+              .email(productOffering.getUser().getEmail())
               .username(productOffering.getUser().getUsername())
               .firstname(productOffering.getUser().getFirstname())
               .lastname(productOffering.getUser().getLastname())
@@ -449,7 +447,9 @@ public class ProductOfferingService {
           .VAT_ID(productOffering.getVAT_ID())
           .comments(productOffering.getComments())
           .status(productOffering.getStatus())
-          .requestedComplianceLevel(productOffering.getRequestedComplianceLevel())
+          .requestedComplianceLevel(
+            productOffering.getRequestedComplianceLevel()
+          )
           .issuer(
             productOffering.getIssuer() != null
               ? UserDTO

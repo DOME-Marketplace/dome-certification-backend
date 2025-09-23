@@ -23,6 +23,7 @@ import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntit
 import com.dekraspain.backend.template.shared.customResponses.ApiResponse;
 import com.dekraspain.backend.template.shared.email.service.EmailService;
 import com.dekraspain.backend.template.spring.Jwt.JwtService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.IOException;
@@ -35,7 +36,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -234,6 +234,11 @@ public class ProductOfferingController {
     @RequestPart("files") List<MultipartFile> files
   ) {
     try {
+      Authentication authentication = SecurityContextHolder
+        .getContext()
+        .getAuthentication();
+
+      UserEntity user = (UserEntity) authentication.getPrincipal();
       ProductOfferingRequest request = ProductOfferingRequest
         .builder()
         .service_name(serviceName)
@@ -249,9 +254,8 @@ public class ProductOfferingController {
         .build();
 
       productService.createProductOffering(request, files);
-
       // Send email
-      String email = emailOrganization;
+      String email = user.getEmail();
       String subject =
         "Compliance of " + serviceName + " " + serviceVersion + " created";
 
@@ -263,7 +267,7 @@ public class ProductOfferingController {
         );
       } catch (Exception e) {
         // Log the error but don't propagate it
-        log.warn("Error sending email to: {}", emailOrganization, e);
+        log.warn("Error sending email to: {}", email, e);
       }
 
       return ResponseEntity
@@ -309,7 +313,7 @@ public class ProductOfferingController {
     );
 
     // Send email
-    String email = productOffering.email_organization;
+    String email = productOffering.getUser().getEmail();
     String subject = String.format(
       "Compliance of %s %s is %s",
       productOffering.getService_name(),
@@ -363,7 +367,7 @@ public class ProductOfferingController {
       }
 
       // Datos para el correo
-      String email = productOffering.getEmail_organization();
+      String email = productOffering.getUser().getEmail();
       String subject = String.format(
         "Compliance of %s %s",
         productOffering.getService_name(),
@@ -461,8 +465,10 @@ public class ProductOfferingController {
   }
 
   @PostMapping("/generate-label-credential")
-  public ResponseEntity<?> generateLabelCredential(@RequestBody LabelCredentialRequest request) {
-      Authentication authentication = SecurityContextHolder
+  public ResponseEntity<?> generateLabelCredential(
+    @RequestBody LabelCredentialRequest request
+  ) {
+    Authentication authentication = SecurityContextHolder
       .getContext()
       .getAuthentication();
     UserEntity user = (UserEntity) authentication.getPrincipal();
@@ -480,9 +486,10 @@ public class ProductOfferingController {
         user,
         request.getValidUntil()
       );
-
- 
-       String client_assertion = jwtService.generateClientAssertionTokenM2M();
+      ProductOfferingEntity productOffering = productService.getProductOfferingById(
+        request.getPoId()
+      );
+      String client_assertion = jwtService.generateClientAssertionTokenM2M();
       HttpHeaders tokenHeaders = new HttpHeaders();
       tokenHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
@@ -495,7 +502,6 @@ public class ProductOfferingController {
       );
       verifierTokenBody.add("client_assertion", client_assertion);
 
-      
       HttpEntity<MultiValueMap<String, String>> tokenRequest = new HttpEntity<>(
         verifierTokenBody,
         tokenHeaders
@@ -507,7 +513,7 @@ public class ProductOfferingController {
         VerifierTokenResponse.class
       );
 
-            VerifierTokenResponse tokenBody = tokenResponse.getBody();
+      VerifierTokenResponse tokenBody = tokenResponse.getBody();
       if (tokenBody == null || tokenBody.getAccess_token() == null) {
         log.info("Missing access_token in verifier response");
         return ResponseEntity
@@ -515,9 +521,7 @@ public class ProductOfferingController {
           .body("Missing access token");
       }
 
-      
       String accessToken = tokenBody.getAccess_token();
-
 
       // 1. Enviar al issuer
       HttpHeaders headers = new HttpHeaders();
@@ -526,19 +530,26 @@ public class ProductOfferingController {
       headers.setContentType(MediaType.APPLICATION_JSON);
 
       Map<String, Object> body = Map.of(
-        "schema", "gx:LabelCredential",
-        "operation_mode", "S",
-        "format", "jwt_vc_json",
-        "payload", labelCredentialPayload,
-        "credential_owner_email", request.getCredential_owner_email() ,
-        "response_uri",request.getResponse_uri()
-
+        "schema",
+        "gx:LabelCredential",
+        "operation_mode",
+        "S",
+        "format",
+        "jwt_vc_json",
+        "payload",
+        labelCredentialPayload,
+        "credential_owner_email",
+        productOffering.getUser().getEmail(),
+        "response_uri",
+        request.getResponse_uri()
       );
 
-                 // Mostrar el payload en formato JSON
+      // Mostrar el payload en formato JSON
       try {
         ObjectMapper mapper = new ObjectMapper();
-        String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(body);
+        String json = mapper
+          .writerWithDefaultPrettyPrinter()
+          .writeValueAsString(body);
         log.info("Generated body for issuer (JSON):\n{}", json);
       } catch (Exception e) {
         log.warn("No se pudo serializar el payload a JSON", e);
@@ -547,8 +558,7 @@ public class ProductOfferingController {
       // print accessToken
       // log.info("Access Token: {}", accessToken);
 
-
-      HttpEntity <Map<String, Object>> httpEntity = new HttpEntity<>(
+      HttpEntity<Map<String, Object>> httpEntity = new HttpEntity<>(
         body,
         headers
       );
@@ -565,14 +575,14 @@ public class ProductOfferingController {
       );
       log.info("Issuer response body: {}", issuerResponse.getBody());
 
-         // Si la respuesta no es 2xx, propagamos el error
+      // Si la respuesta no es 2xx, propagamos el error
       if (!issuerResponse.getStatusCode().is2xxSuccessful()) {
         return ResponseEntity
           .status(issuerResponse.getStatusCode())
           .body(issuerResponse.getBody());
       }
 
-         // 2. Actualizar PO si hay `poId` y `data`
+      // 2. Actualizar PO si hay `poId` y `data`
       if (request.getPoId() != null && request.getData() != null) {
         productService.updateStatusProductOffering(
           request.getPoId(),
@@ -588,8 +598,7 @@ public class ProductOfferingController {
         );
       }
 
-      
-          return ResponseEntity
+      return ResponseEntity
         .status(issuerResponse.getStatusCode())
         .body(issuerResponse.getBody());
     } catch (HttpClientErrorException ex) {
@@ -603,9 +612,7 @@ public class ProductOfferingController {
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
         .body("Error issuing certificate");
     }
-    
   }
-  
 
   @PostMapping("/issuances")
   public ResponseEntity<?> issueCertificate(
