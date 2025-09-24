@@ -1,10 +1,7 @@
 package com.dekraspain.backend.template.modules.productOffering.domain.model;
 
-import com.dekraspain.backend.template.modules.productOffering.application.request.CompliancesRequest;
 import com.dekraspain.backend.template.shared.customValidators.EnumValidator;
 import java.util.Date;
-import java.util.List;
-import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

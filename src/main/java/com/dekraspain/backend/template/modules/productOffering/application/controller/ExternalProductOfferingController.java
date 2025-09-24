@@ -5,7 +5,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
@@ -42,7 +41,6 @@ public class ExternalProductOfferingController {
         if (lastColon == -1) {
             return ResponseEntity.badRequest().body("Invalid product offering id in url");
         }
-        String id = url.substring(lastColon + 1);
         // Reconstruir la url destino
         String fullId = url.substring(url.lastIndexOf("urn:ngsi-ld:product-offering:"));
         String targetUrl = matchedDomain + "catalog/productOffering/" + fullId;

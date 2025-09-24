@@ -34,19 +34,19 @@ Content-Type: multipart/form-data
 
 Todos los campos son enviados como `@RequestPart` en formato multipart:
 
-| Campo                         | Tipo                      | Obligatorio | Descripción                                                |
-| ----------------------------- | ------------------------- | ----------- | ---------------------------------------------------------- |
-| `product_specification_id`    | String                    | ✓           | Identificador único de la especificación del producto      |
-| `service_name`                | String                    | ✓           | Nombre del servicio a certificar                           |
-| `service_version`             | String                    | ✓           | Versión del servicio                                       |
-| `organization_name`           | String                    | ✓           | Nombre de la organización solicitante                      |
-| `organization_address`        | String                    | ✓           | Dirección completa de la organización                      |
-| `organization_country`        | String                    | ✓           | Código ISO de país (formato: XX)                           |
-| `organization_email`          | String                    | ✓           | Email de contacto de la organización (formato válido)      |
-| `organization_url`            | String                    | ✓           | URL/sitio web de la organización                           |
-| `organization_vat_id`         | String                    | ✓           | Número de identificación fiscal (VAT ID)                   |
-| `requested_compliances_level` | String                    | ✓           | Nivel de cumplimiento solicitado (solo acepta: "Baseline") |
-| `files`                       | List&lt;MultipartFile&gt; | ✓           | Archivos de documentación de cumplimiento                  |
+| Campo                        | Tipo                      | Obligatorio | Descripción                                                |
+| ---------------------------- | ------------------------- | ----------- | ---------------------------------------------------------- |
+| `product_specification_id`   | String                    | ✓           | Identificador único de la especificación del producto      |
+| `service_name`               | String                    | ✓           | Nombre del servicio a certificar                           |
+| `service_version`            | String                    | ✓           | Versión del servicio                                       |
+| `organization_name`          | String                    | ✓           | Nombre de la organización solicitante                      |
+| `organization_address`       | String                    | ✓           | Dirección completa de la organización                      |
+| `organization_country`       | String                    | ✓           | Código ISO de país (formato: XX)                           |
+| `organization_email`         | String                    | ✓           | Email de contacto de la organización (formato válido)      |
+| `organization_url`           | String                    | ✓           | URL/sitio web de la organización                           |
+| `organization_vat_id`        | String                    | ✓           | Número de identificación fiscal (VAT ID)                   |
+| `requested_compliance_level` | String                    | ✓           | Nivel de cumplimiento solicitado (solo acepta: "Baseline") |
+| `files`                      | List&lt;MultipartFile&gt; | ✓           | Archivos de documentación de cumplimiento                  |
 
 ### Validaciones de Campos
 
@@ -58,7 +58,7 @@ Todos los campos son enviados como `@RequestPart` en formato multipart:
 - **organization_email**: Formato de email válido
 - **organization_url**: URL válida
 - **organization_vat_id**: No puede estar vacío
-- **requested_compliances_level**: Por el momento solo aceptamos "Baseline"
+- **requested_compliance_level**: Por el momento solo aceptamos "Baseline"
 - **files**: Lista de archivos en formato multipart (documentos PDF, imágenes, etc.)
 
 ## Respuestas
@@ -140,7 +140,7 @@ curl -X POST "https://dome-certification.dome-marketplace-sbx.org/api/v1/product
   -F "organization_email=compliance@techcorp.com" \
   -F "organization_url=https://www.techcorp.com" \
   -F "organization_vat_id=ESA12345678" \
-  -F "requested_compliances_level=Baseline" \
+  -F "requested_compliance_level=Baseline" \
   -F "files=@compliance_document.pdf" \
   -F "files=@technical_specification.pdf"
 ```
@@ -158,7 +158,7 @@ formData.append("organization_country", "ES");
 formData.append("organization_email", "compliance@techcorp.com");
 formData.append("organization_url", "https://www.techcorp.com");
 formData.append("organization_vat_id", "ESA12345678");
-formData.append("requested_compliances_level", "Baseline");
+formData.append("requested_compliance_level", "Baseline");
 formData.append("files", fileInput1.files[0]);
 formData.append("files", fileInput2.files[0]);
 

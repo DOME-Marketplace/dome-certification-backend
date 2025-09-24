@@ -29,7 +29,7 @@ public class ProductOfferingComplianceProfileCriteriaController {
     public ResponseEntity<List<ProductOfferingComplianceProfileCriteriaDetailDTO>> getByProductOffering(@PathVariable Long productOfferingId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserEntity user = (UserEntity) authentication.getPrincipal();
-        boolean isAdminOrEmployee = UserRole.ADMIN.name().equals(user.getRole()) || UserRole.EMPLOYEE.name().equals(user.getRole());
+        boolean isAdminOrEmployee = UserRole.ADMIN.equals(user.getRole()) || UserRole.EMPLOYEE.equals(user.getRole());
         ProductOfferingEntity po = productOfferingService.getProductOfferingById(productOfferingId);
         boolean isOwner = po != null && po.getUser() != null && po.getUser().getId().equals(user.getId());
         if (!isAdminOrEmployee && !isOwner) {

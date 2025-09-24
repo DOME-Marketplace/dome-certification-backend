@@ -14,6 +14,8 @@ import java.security.spec.ECParameterSpec;
 import java.security.spec.ECPublicKeySpec;
 import java.util.Base64;
 import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -24,6 +26,9 @@ public class JwksM2MTokenVerifier implements M2MTokenVerifier {
   private volatile KeysContainer cachedKeys;
   private volatile long fetchedAt = 0L;
   private final long ttl = 5 * 60 * 1000;
+
+  @Value("${jwt.oauth.aud}")
+  private String verifiyerUrl;
 
   private KeysContainer fetchJwks(String jwksUrl) throws Exception {
     long now = System.currentTimeMillis();
@@ -62,7 +67,7 @@ public class JwksM2MTokenVerifier implements M2MTokenVerifier {
       String alg = header.getOrDefault("alg", "").toString();
       if (!alg.toUpperCase().startsWith("ES")) return M2MTokenVerificationResult.unsupportedAlg("Unsupported alg: " + alg);
 
-      String jwksUrl = "https://verifier.dome-marketplace-sbx.org/oidc/jwks";
+      String jwksUrl = verifiyerUrl + "/oidc/jwks";
       KeysContainer keys;
       try {
         keys = fetchJwks(jwksUrl);

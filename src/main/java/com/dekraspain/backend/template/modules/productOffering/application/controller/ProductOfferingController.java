@@ -15,7 +15,6 @@ import com.dekraspain.backend.template.modules.productOffering.domain.service.La
 import com.dekraspain.backend.template.modules.productOffering.domain.service.ProductOfferingComplianceProfileCriteriaService;
 import com.dekraspain.backend.template.modules.productOffering.domain.service.ProductOfferingService;
 import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ComplianceProfileEntity;
-import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ProductOfferingComplianceProfileCriteriaEntity;
 import com.dekraspain.backend.template.modules.productOffering.persistence.entity.ProductOfferingEntity;
 import com.dekraspain.backend.template.modules.productOffering.persistence.jpa.ComplianceProfileRepository;
 import com.dekraspain.backend.template.modules.user.domain.model.UserDTO;
@@ -230,7 +229,7 @@ public class ProductOfferingController {
     @RequestPart("email_organization") String emailOrganization,
     @RequestPart("VAT_ID") String vatId,
     @RequestPart("id_PO") String idPo,
-    @RequestPart("requested_compliances_level") String compliancesLevel,
+    @RequestPart("requested_compliance_level") String compliancesLevel,
     @RequestPart("files") List<MultipartFile> files
   ) {
     try {
@@ -313,7 +312,7 @@ public class ProductOfferingController {
     @RequestPart("organization_email") String emailOrganization,
     @RequestPart("organization_url") String urlOrganization,
     @RequestPart("organization_vat_id") String vatId,
-    @RequestPart("requested_compliances_level") String compliancesLevel,
+    @RequestPart("requested_compliance_level") String compliancesLevel,
     @RequestPart("files") List<MultipartFile> files
   ) {
     try {

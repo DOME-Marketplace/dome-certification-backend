@@ -34,19 +34,19 @@ Content-Type: multipart/form-data
 
 All fields are sent as `@RequestPart` in multipart format:
 
-| Field                         | Type                      | Required | Description                                           |
-| ----------------------------- | ------------------------- | -------- | ----------------------------------------------------- |
-| `product_specification_id`    | String                    | ✓        | Unique identifier for the product specification       |
-| `service_name`                | String                    | ✓        | Name of the service to be certified                   |
-| `service_version`             | String                    | ✓        | Service version                                       |
-| `organization_name`           | String                    | ✓        | Name of the requesting organization                   |
-| `organization_address`        | String                    | ✓        | Complete address of the organization                  |
-| `organization_country`        | String                    | ✓        | ISO country code (format: XX)                         |
-| `organization_email`          | String                    | ✓        | Organization contact email (valid format)             |
-| `organization_url`            | String                    | ✓        | Organization website/URL                              |
-| `organization_vat_id`         | String                    | ✓        | Tax identification number (VAT ID)                    |
-| `requested_compliances_level` | String                    | ✓        | Requested compliance level (only accepts: "Baseline") |
-| `files`                       | List&lt;MultipartFile&gt; | ✓        | Compliance documentation files                        |
+| Field                        | Type                      | Required | Description                                           |
+| ---------------------------- | ------------------------- | -------- | ----------------------------------------------------- |
+| `product_specification_id`   | String                    | ✓        | Unique identifier for the product specification       |
+| `service_name`               | String                    | ✓        | Name of the service to be certified                   |
+| `service_version`            | String                    | ✓        | Service version                                       |
+| `organization_name`          | String                    | ✓        | Name of the requesting organization                   |
+| `organization_address`       | String                    | ✓        | Complete address of the organization                  |
+| `organization_country`       | String                    | ✓        | ISO country code (format: XX)                         |
+| `organization_email`         | String                    | ✓        | Organization contact email (valid format)             |
+| `organization_url`           | String                    | ✓        | Organization website/URL                              |
+| `organization_vat_id`        | String                    | ✓        | Tax identification number (VAT ID)                    |
+| `requested_compliance_level` | String                    | ✓        | Requested compliance level (only accepts: "Baseline") |
+| `files`                      | List&lt;MultipartFile&gt; | ✓        | Compliance documentation files                        |
 
 ### Field Validations
 
@@ -58,7 +58,7 @@ All fields are sent as `@RequestPart` in multipart format:
 - **organization_email**: Valid email format
 - **organization_url**: Valid URL
 - **organization_vat_id**: Cannot be empty
-- **requested_compliances_level**: Currently only accepts "Baseline"
+- **requested_compliance_level**: Currently only accepts "Baseline"
 - **files**: List of files in multipart format (PDF documents, images, etc.)
 
 ## Responses
@@ -140,7 +140,7 @@ curl -X POST "https://dome-certification.dome-marketplace-sbx.org/api/v1/product
   -F "organization_email=compliance@techcorp.com" \
   -F "organization_url=https://www.techcorp.com" \
   -F "organization_vat_id=ESA12345678" \
-  -F "requested_compliances_level=Baseline" \
+  -F "requested_compliance_level=Baseline" \
   -F "files=@compliance_document.pdf" \
   -F "files=@technical_specification.pdf"
 ```
@@ -158,7 +158,7 @@ formData.append("organization_country", "ES");
 formData.append("organization_email", "compliance@techcorp.com");
 formData.append("organization_url", "https://www.techcorp.com");
 formData.append("organization_vat_id", "ESA12345678");
-formData.append("requested_compliances_level", "Baseline");
+formData.append("requested_compliance_level", "Baseline");
 formData.append("files", fileInput1.files[0]);
 formData.append("files", fileInput2.files[0]);
 
