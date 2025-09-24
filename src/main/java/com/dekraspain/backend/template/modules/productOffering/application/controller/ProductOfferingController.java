@@ -624,7 +624,7 @@ public class ProductOfferingController {
         "payload",
         labelCredentialPayload,
         "credential_owner_email",
-        productOffering.getUser().getEmail(),
+        productOffering.getEmail_organization(),
         "response_uri",
         request.getResponse_uri()
       );
