@@ -122,7 +122,7 @@ public class AuthService {
       credentialSubject.getMandate().getMandatee().getId(),
       role,
       credentialSubject.getMandate().getMandator().getOrganizationIdentifier(),
-      credentialSubject.getMandate().getMandator().getEmailAddress()
+      credentialSubject.getMandate().getMandator().getEmail()
     );
 
     // Generación del token JWT
