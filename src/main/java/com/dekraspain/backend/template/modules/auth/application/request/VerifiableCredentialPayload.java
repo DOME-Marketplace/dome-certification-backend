@@ -2,12 +2,15 @@ package com.dekraspain.backend.template.modules.auth.application.request;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.Data;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class VerifiableCredentialPayload {
 
   private String aud;
@@ -21,6 +24,7 @@ public class VerifiableCredentialPayload {
   private String client_id;
 
   @Data
+  @JsonIgnoreProperties(ignoreUnknown = true)
   public static class VerifiableCredential {
 
     @JsonProperty("@context")
@@ -31,9 +35,11 @@ public class VerifiableCredentialPayload {
     private CredentialSubject credentialSubject;
     private String expirationDate;
     private String issuanceDate;
-    private String issuer;
+    private Object issuer;
     private String validFrom;
     private String validUntil;
+    private String description;
+    private Object credentialStatus;
   }
 
   @Data
@@ -65,9 +71,12 @@ public class VerifiableCredentialPayload {
 
     private String id;
     private String email;
+    @JsonAlias("firstName")
     private String first_name;
+    @JsonAlias("lastName")
     private String last_name;
     private String mobile_phone;
+    private String nationality;
   }
 
   @Data
@@ -75,7 +84,21 @@ public class VerifiableCredentialPayload {
 
     private String commonName;
     private String country;
-    private String emailAddress;
+    @JsonAlias("emailAddress")
+    private String email;
+    private String id;
+    private String organization;
+    private String organizationIdentifier;
+    private String serialNumber;
+  }
+
+  @Data
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  public static class Issuer {
+
+    private String commonName;
+    private String country;
+    private String id;
     private String organization;
     private String organizationIdentifier;
     private String serialNumber;
@@ -87,10 +110,14 @@ public class VerifiableCredentialPayload {
     private String id;
 
     @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
+    @JsonAlias("action")
     private List<String> tmf_action;
-
+    @JsonAlias("domain")
     private String tmf_domain;
+    
+    @JsonAlias("function")
     private String tmf_function;
+    @JsonAlias("type")
     private String tmf_type;
   }
 
@@ -99,7 +126,8 @@ public class VerifiableCredentialPayload {
 
     private String commonName;
     private String country;
-    private String emailAddress;
+    @JsonAlias("emailAddress")
+    private String email;
     private String organization;
     private String organizationIdentifier;
     private String serialNumber;

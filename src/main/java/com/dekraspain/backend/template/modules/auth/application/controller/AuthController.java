@@ -115,7 +115,15 @@ public class AuthController {
       VerifiableCredentialPayload verifiableCredential = jwtService.parseJwtPayload(
         payload
       );
-
+      // Print the verifiable credential as JSON for debugging
+      try {
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String verifiableJson = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(verifiableCredential);
+        System.out.println(verifiableJson);
+      } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+        // If serialization fails, log the error to stdout for debugging
+        e.printStackTrace();
+      }
       VerifiableCredentialPayload.CredentialSubject credentialSubject = verifiableCredential
         .getVc()
         .getCredentialSubject();
@@ -124,7 +132,7 @@ public class AuthController {
 
       VerifiableCredentialPayload.Mandatee mandatee = credentialSubject
         .getMandate()
-        .getMandatee();
+         .getMandatee();
 
       VerifiableCredentialPayload.Mandator mandator = credentialSubject
         .getMandate()
@@ -155,7 +163,7 @@ public class AuthController {
             mandatee.getId(),
             role,
             mandator.getOrganizationIdentifier(),
-            mandator.getEmailAddress()
+            mandator.getEmail()
           )
         );
       }
@@ -168,7 +176,7 @@ public class AuthController {
             mandatee.getId(),
             role,
             mandator.getOrganizationIdentifier(),
-            mandator.getEmailAddress()
+            mandator.getEmail()
           )
         );
       }
