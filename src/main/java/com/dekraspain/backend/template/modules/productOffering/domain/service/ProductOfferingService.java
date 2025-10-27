@@ -1,6 +1,5 @@
 package com.dekraspain.backend.template.modules.productOffering.domain.service;
 
-import com.dekraspain.backend.template.modules.productOffering.application.request.CompliancesRequest;
 import com.dekraspain.backend.template.modules.productOffering.application.request.ProductOfferingRequest;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.CompilanceProfileDTO;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ComplianceDTO;
@@ -211,6 +210,7 @@ public class ProductOfferingService {
     ProductOfferingEntity existingProductOffering = getProductOfferingById(id);
     UserEntity user = (UserEntity) authentication.getPrincipal();
     existingProductOffering.setStatus(request.getStatus());
+    existingProductOffering.setIssuer(user);
 
     if (request.getStatus() == ProductOfferingStates.REJECTED) {
       existingProductOffering.setComments(request.getComments());
@@ -222,7 +222,6 @@ public class ProductOfferingService {
       request.getExpiration_date() != null
     ) {
       existingProductOffering.setIssue_date(new Date());
-      existingProductOffering.setIssuer(user);
       existingProductOffering.setExpiration_date(request.getExpiration_date());
       // Optional<List<CompliancesRequest>> compliances = request.getCompliances();
 
