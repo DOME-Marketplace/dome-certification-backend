@@ -54,7 +54,7 @@ public class ProductOfferingEntity {
   @JoinColumn(name = "issuer")
   private UserEntity issuer;
 
-  @ManyToOne(targetEntity = UserEntity.class, fetch = FetchType.LAZY)
+  @ManyToOne(targetEntity = UserEntity.class, fetch = FetchType.EAGER)
   @JoinColumn(name = "user_id")
   private UserEntity user;
 

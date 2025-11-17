@@ -614,6 +614,17 @@ public class ProductOfferingController {
       headers.set("X-ID-TOKEN", request.getIdToken());
       headers.setContentType(MediaType.APPLICATION_JSON);
 
+      // Validar que el usuario no sea null
+      if (productOffering.getUser() == null) {
+        log.error("ProductOffering {} has no associated user", productOffering.getId());
+        return ResponseEntity
+          .status(HttpStatus.BAD_REQUEST)
+          .body("ProductOffering has no associated user");
+      }
+
+      String ownerEmail = productOffering.getUser().getEmail();
+      log.info("Product Offering User Email: {}", ownerEmail);
+      
       Map<String, Object> body = Map.of(
         "schema",
         "gx:LabelCredential",
@@ -624,7 +635,7 @@ public class ProductOfferingController {
         "payload",
         labelCredentialPayload,
         "credential_owner_email",
-        productOffering.getEmail_organization(),
+        ownerEmail,
         "response_uri",
         request.getResponse_uri()
       );
