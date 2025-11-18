@@ -634,7 +634,7 @@ public class ProductOfferingController {
         "jwt_vc_json",
         "payload",
         labelCredentialPayload,
-        "credential_owner_email",
+        "email",
         ownerEmail,
         "response_uri",
         request.getResponse_uri()
