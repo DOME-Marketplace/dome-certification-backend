@@ -1,8 +1,12 @@
 package com.dekraspain.backend.template.modules.productOffering.persistence.entity;
 
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingStates;
-import com.dekraspain.backend.template.modules.productOffering.domain.model.RequestedComplianceLevel;
 import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,9 +19,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -46,15 +47,11 @@ public class ProductOfferingEntity {
   private String VAT_ID;
   private String comments;
 
-  // Nuevo campo: Requested Compliance Level como Value Object
-  @jakarta.persistence.Embedded
-  private RequestedComplianceLevel requestedComplianceLevel;
-
   @ManyToOne(targetEntity = UserEntity.class, fetch = FetchType.LAZY)
   @JoinColumn(name = "issuer")
   private UserEntity issuer;
 
-  @ManyToOne(targetEntity = UserEntity.class, fetch = FetchType.EAGER)
+  @ManyToOne(targetEntity = UserEntity.class, fetch = FetchType.LAZY)
   @JoinColumn(name = "user_id")
   private UserEntity user;
 
@@ -73,17 +70,9 @@ public class ProductOfferingEntity {
   @Column(nullable = false, columnDefinition = "boolean default false")
   private Boolean isExpirationEmailSent;
 
-  @OneToMany(
-    mappedBy = "productOffering",
-    cascade = CascadeType.ALL,
-    orphanRemoval = true
-  )
+  @OneToMany(mappedBy = "productOffering", cascade = CascadeType.ALL)
   private final List<ComplianceProfileEntity> complianceProfiles = new ArrayList<>();
 
-  @OneToMany(
-    mappedBy = "productOffering",
-    cascade = CascadeType.ALL,
-    orphanRemoval = true
-  )
+  @OneToMany(mappedBy = "productOffering", cascade = CascadeType.ALL)
   private final List<ComplianceEntity> compliances = new ArrayList<>();
 }

@@ -5,14 +5,11 @@ import com.dekraspain.backend.template.modules.auth.application.request.Register
 import com.dekraspain.backend.template.modules.auth.application.request.VerifiableCredentialPayload;
 import com.dekraspain.backend.template.modules.auth.application.response.AuthResponse;
 import com.dekraspain.backend.template.modules.auth.domain.service.AuthService;
-import com.dekraspain.backend.template.modules.user.domain.model.UserRole;
-import com.dekraspain.backend.template.modules.user.domain.service.UserService;
 import com.dekraspain.backend.template.spring.Jwt.JwtService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -34,7 +31,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
   private final AuthService authService;
-  private final UserService userService;
   private final JwtService jwtService;
 
   @Operation(summary = "Login")
@@ -43,8 +39,8 @@ public class AuthController {
     @Valid @RequestBody LoginRequest request
   ) {
     if (
-      !userService.existsByUsername(request.username) &&
-      !userService.existsByEmail(request.username)
+      !authService.existsByUsername(request.username) &&
+      !authService.existsByEmail(request.username)
     ) {
       return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
     }
@@ -58,8 +54,8 @@ public class AuthController {
     @Valid @RequestBody RegisterRequest request
   ) {
     if (
-      userService.existsByUsername(request.username) ||
-      userService.existsByEmail(request.username)
+      authService.existsByUsername(request.username) ||
+      authService.existsByEmail(request.username)
     ) {
       return ResponseEntity.status(HttpStatus.ALREADY_REPORTED).body(null);
     }
@@ -98,12 +94,6 @@ public class AuthController {
     return jwtService.generateClientAssertionToken();
   }
 
-  @Operation(summary = "client-assertion-token-m2m")
-  @GetMapping(value = "client-assertion-token-m2m")
-  public String generateClientAssertionTokenM2M() {
-    return jwtService.generateClientAssertionTokenM2M();
-  }
-
   @Operation(summary = "exchange-token")
   @PostMapping(value = "exchange-token")
   public ResponseEntity<AuthResponse> exchangeToken(
@@ -115,76 +105,36 @@ public class AuthController {
       VerifiableCredentialPayload verifiableCredential = jwtService.parseJwtPayload(
         payload
       );
-      // Print the verifiable credential as JSON for debugging
-      try {
-        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-        String verifiableJson = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(verifiableCredential);
-        System.out.println(verifiableJson);
-      } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-        // If serialization fails, log the error to stdout for debugging
-        e.printStackTrace();
-      }
       VerifiableCredentialPayload.CredentialSubject credentialSubject = verifiableCredential
-        .getVc()
+        .getVerifiableCredential()
         .getCredentialSubject();
 
-      VerifiableCredentialPayload.Mandate mandate = credentialSubject.getMandate();
-
-      VerifiableCredentialPayload.Mandatee mandatee = credentialSubject
+      VerifiableCredentialPayload.Mandatee mandatee = verifiableCredential
+        .getVerifiableCredential()
+        .getCredentialSubject()
         .getMandate()
-         .getMandatee();
+        .getMandatee();
 
-      VerifiableCredentialPayload.Mandator mandator = credentialSubject
-        .getMandate()
-        .getMandator();
-
-      // Validar que los datos requeridos no sean nulos
-      if (credentialSubject == null || mandate == null) {
-        throw new IllegalArgumentException("Mandate data is required");
-      }
-
-      List<VerifiableCredentialPayload.Power> power = mandate.getPower();
-
-      // Determinar el rol del usuario
-      UserRole role = (
-          power != null &&
-          power
-            .stream()
-            .anyMatch(p -> "certification".equalsIgnoreCase(p.getTmf_function())
-            )
-        )
-        ? UserRole.EMPLOYEE
-        : UserRole.CUSTOMER;
-
-      // Si el didkey ya existe, proceder con el logins
-      if (userService.existsByDidkey(mandatee.getId())) {
-        return ResponseEntity.ok(
-          authService.loginProvider(
-            mandatee.getId(),
-            role,
-            mandator.getOrganizationIdentifier(),
-            mandator.getEmail()
-          )
-        );
+      // Si el didkey ya existe en la base de datos, proceder con el logins
+      if (authService.existsByDidkey(mandatee.getId())) {
+        // Login: Obtiene al usuario a partir de didkey
+        return ResponseEntity.ok(authService.loginProvider(mandatee.getId()));
       }
 
       // Si no existe el didkey, intentamos con el email
-      if (userService.existsByEmail(mandatee.getEmail())) {
+      if (authService.existsByEmail(mandatee.getEmail())) {
+        // Actualiza y asigna el didkey si es necesario
+
         return ResponseEntity.ok(
           authService.loginProviderAndUpdate(
             mandatee.getEmail(),
-            mandatee.getId(),
-            role,
-            mandator.getOrganizationIdentifier(),
-            mandator.getEmail()
+            mandatee.getId()
           )
         );
       }
 
-      // Si no se encuentra el usuario, registrar
-      return ResponseEntity.ok(
-        authService.registerProvider(credentialSubject, role)
-      );
+      // Si no se encuentra el usuario, puedes manejar el registro o retornar un error
+      return ResponseEntity.ok(authService.registerProvider(credentialSubject));
     } catch (Exception e) {
       return ResponseEntity.badRequest().body(null);
     }

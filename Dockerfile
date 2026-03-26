@@ -11,7 +11,7 @@ COPY . .
 RUN mvn clean package -P prod -DskipTests
 
 # Usa una imagen base de OpenJDK para ejecutar la aplicación
-FROM eclipse-temurin:17-jre
+FROM openjdk:17-jdk-alpine
 
 # Establece el directorio de trabajo
 WORKDIR /app

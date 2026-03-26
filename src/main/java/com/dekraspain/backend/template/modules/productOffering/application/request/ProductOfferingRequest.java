@@ -98,7 +98,4 @@ public class ProductOfferingRequest {
   public String VAT_ID;
 
   public String comments;
-
-  @NotNull(message = "Requested Compliance Level cannot be null")
-  public String requested_compliances_level;
 }

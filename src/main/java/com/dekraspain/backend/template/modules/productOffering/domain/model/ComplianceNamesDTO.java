@@ -9,9 +9,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class ComplianceStandardsDTO {
+public class ComplianceNamesDTO {
 
   private Long id;
-  private String standard;
-  private String description;
+  private String complianceName;
 }
