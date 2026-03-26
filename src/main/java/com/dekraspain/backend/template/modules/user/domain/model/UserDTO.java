@@ -14,12 +14,13 @@ public class UserDTO {
 
   String id;
   String username;
+  String email;
   String firstname;
   String lastname;
-  String country_code;
-  String address;
+  String organization_country_code;
   String organization_name;
-  String website;
+  String organization_id;
+  String organization_email;
   Date last_seen;
   UserRole role;
 }

@@ -14,4 +14,5 @@ public class CompilanceProfileDTO {
   private Long id;
   private String fileName;
   private String url;
+  private String hash;
 }

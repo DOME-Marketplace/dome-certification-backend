@@ -8,7 +8,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Data
 @Builder
@@ -30,7 +29,9 @@ public class ProductOfferingDTO {
   public UserDTO issuer;
   public UserDTO user;
   public String image;
-  public List<ComplianceNamesDTO> compliances;
+  public List<ComplianceDTO> compliances;
+
+  public RequestedComplianceLevel requestedComplianceLevel;
 
   @EnumValidator(enumClass = ProductOfferingStates.class)
   public ProductOfferingStates status;
@@ -39,6 +40,5 @@ public class ProductOfferingDTO {
   public Date issue_date;
   public Date expiration_date;
 
-  @Setter
   public List<CompilanceProfileDTO> complianceProfiles;
 }

@@ -25,6 +25,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
   private final JwtService jwtService;
   private final UserRepository userRepository;
 
+  private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+
+  @Override
+  protected boolean shouldNotFilter(jakarta.servlet.http.HttpServletRequest request) throws jakarta.servlet.ServletException {
+    String path = request.getRequestURI();
+    // Skip JWT processing for the dedicated M2M endpoint so it uses the independent auth flow
+    if (path != null && path.endsWith("/api/v1/product-offering/certificate")) {
+      log.debug("JwtAuthenticationFilter: skipping JWT filter for path {}", path);
+      return true;
+    }
+    return false;
+  }
+
   @Override
   protected void doFilterInternal(
     HttpServletRequest request,

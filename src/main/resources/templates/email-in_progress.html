@@ -3,34 +3,78 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Product Offering In Progress</title>
 </head>
 
-<body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #ffffff; color: #000000;">
-    <div
-        style="width: 100%; max-width: 600px; margin: 0 auto; padding: 20px; box-sizing: border-box; background-color: #2d58a7; color: white; display: flex; align-items: center; gap: 10px;">
-        <img src="https://dome-marketplace-prd.org/assets/logos/DOME_Icon_White.svg" width="44px" height="44px"
-            alt="DOME Logo" style="vertical-align: middle;" />
-        <h2 style="margin: 0; color: white;">Certification</h2>
-    </div>
-    <div
-        style="width: 100%; max-width: 600px; margin: 0 auto; padding: 20px; box-sizing: border-box; background-color: #f3f4fb; color: #000000;">
-        <h1 style="color: #2d58a7; text-align: center;">Compliance In Progress</h1>
-        <div style="text-align: center;">
-            <p style="color: #000000; line-height: 1.6;">Certification of your product on DOME marketplace is currently
-                in progress.</p>
-            <p style="color: #000000; line-height: 1.6;">Please wait for further updates.</p>
-            <a href="https://dome-certification.dome-marketplace-sbx.org/dashboard-customer"
-                style="display: inline-block; padding: 10px 20px; background-color: #3f51b5; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px;">View
-                compliance status</a>
-        </div>
-        <div style="text-align: center; margin-top: 30px; padding-top: 10px; border-top: 1px solid #2d58a7;">
-            <p style="font-size: 12px; color: #3f51b5;">This email was sent from <strong>DOME Certification</strong>.
-                Contact us for any questions or inquiries.</p>
-            <p style="font-size: 12px; color: #3f51b5;">© 2024 DOME Certification. All rights reserved.</p>
-        </div>
-    </div>
+<body style="margin: 0; padding: 0; background-color: #ffffff;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff">
+        <tr>
+            <td align="center">
+
+                <!-- Header -->
+                <table width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#2d58a7">
+                    <tr>
+                        <td style="padding: 16px;">
+                            <table cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td valign="middle" style="padding-right: 10px;">
+                                        <img src="https://dome-certification.dome-marketplace-sbx.org/assets/icon/DOME_Icon_White.png"
+                                            width="40" height="36" alt="DOME Logo" style="display: block;" />
+                                    </td>
+                                    <td valign="middle"
+                                        style="font-family: Arial, sans-serif; font-size: 24px; color: #ffffff;">
+                                        <strong>Certification</strong>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+
+
+                <!-- Content -->
+                <table width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#f3f4fb" style="padding: 20px;">
+                    <tr>
+                        <td align="center" style="padding: 20px; font-family: Arial, sans-serif;">
+                            <h1 style="color: #2d58a7; margin: 0 0 20px;">Compliance In Progress</h1>
+                            <p style="color: #000000; line-height: 1.6; font-size: 16px; margin: 0 0 10px;">
+                                Certification of your product on DOME marketplace is currently in progress.
+                            </p>
+                            <p style="color: #000000; line-height: 1.6; font-size: 16px; margin: 0 0 20px;">
+                                Please wait for further updates.
+                            </p>
+
+                            <table cellpadding="0" cellspacing="0" border="0" align="center">
+                                <tr>
+                                    <td bgcolor="#3f51b5" style="padding: 10px 20px; border-radius: 4px;">
+                                        <a th:href="${baseUrl + '/dashboard'}" target="_blank"
+                                            style="font-family: Arial, sans-serif; font-size: 16px; color: #ffffff; text-decoration: none; display: inline-block;">
+                                            View compliance status
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td align="center" style="padding: 30px 20px 10px; border-top: 1px solid #2d58a7;">
+                            <p style="font-family: Arial, sans-serif; font-size: 12px; color: #3f51b5; margin: 0;">
+                                This email was sent from <strong>DOME Certification</strong>. Contact us for any
+                                questions or inquiries.
+                            </p>
+                            <p
+                                style="font-family: Arial, sans-serif; font-size: 12px; color: #3f51b5; margin: 5px 0 0;">
+                                © 2025 DOME Certification. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 
 </html>

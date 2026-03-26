@@ -11,6 +11,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @Data
 @Builder
@@ -27,8 +29,10 @@ public class ComplianceProfileEntity {
   private String fileName;
 
   private String url;
+  private String hash;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "product_offering_id")
+  @OnDelete(action = OnDeleteAction.CASCADE)
   private ProductOfferingEntity productOffering;
 }

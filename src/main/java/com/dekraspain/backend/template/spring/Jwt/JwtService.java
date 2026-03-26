@@ -1,16 +1,6 @@
 package com.dekraspain.backend.template.spring.Jwt;
 
-import com.dekraspain.backend.template.modules.auth.application.request.KeysContainer;
-import com.dekraspain.backend.template.modules.auth.application.request.VerifiableCredentialPayload;
-import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.Key;
 import java.security.KeyFactory;
@@ -28,13 +18,28 @@ import java.util.Base64;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
-import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+
+import com.dekraspain.backend.template.modules.auth.application.request.KeysContainer;
+import com.dekraspain.backend.template.modules.auth.application.request.VerifiableCredentialPayload;
+import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -55,8 +60,8 @@ public class JwtService {
   @Value("${jwt.oauth.aud}")
   private String aud;
 
-  @Value("${jwt.oauth.verifier-did}")
-  private String verifierDidkey;
+  @Value("${jwt.lear.credential}")
+  private String learCredentialJwt;
 
   private final long expirationTime = 86400000;
   private final ObjectMapper objectMapper = new ObjectMapper();
@@ -153,6 +158,71 @@ public class JwtService {
     }
   }
 
+  public String generateClientAssertionTokenM2M() {
+    try {
+      String vpJwt = generateVerifiablePresentationToken();
+      String vpTokenBase64 = Base64
+        .getEncoder()
+        .encodeToString(vpJwt.getBytes(StandardCharsets.UTF_8));
+
+      Claims claims = Jwts.claims();
+      claims.put("iss", clientId);
+      claims.put("sub", clientId);
+      claims.put("aud", aud);
+      claims.put("jti", UUID.randomUUID().toString());
+      claims.put("iat", System.currentTimeMillis() / 1000);
+      claims.put("exp", (System.currentTimeMillis() + expirationTime) / 1000);
+      claims.put("vp_token", vpTokenBase64); // ✅ Base64 del JWT firmado
+
+      Map<String, Object> headerParams = new HashMap<>();
+      headerParams.put("typ", "JWT");
+      headerParams.put("kid", clientId);
+
+      return Jwts
+        .builder()
+        .setHeaderParams(headerParams)
+        .setClaims(claims)
+        .signWith(loadPrivateKey(), SignatureAlgorithm.ES256)
+        .compact();
+    } catch (Exception e) {
+      throw new RuntimeException("Error generating client assertion token", e);
+    }
+  }
+
+  public String generateVerifiablePresentationToken() {
+    try {
+      if (learCredentialJwt == null || learCredentialJwt.isEmpty()) {
+        throw new IllegalStateException(
+          "LEAR_CREDENTIAL_JWT env variable is not set"
+        );
+      }
+
+      long nowSeconds = System.currentTimeMillis() / 1000;
+
+      Map<String, Object> vpClaim = new HashMap<>();
+      vpClaim.put("type", List.of("VerifiablePresentation"));
+      vpClaim.put("verifiableCredential", List.of(learCredentialJwt)); // JWT tal cual
+      // System.out.println("learCredentialJwt: " + learCredentialJwt);
+
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("vp", vpClaim);
+      claims.put("iss", clientId);
+      claims.put("jti", UUID.randomUUID().toString());
+      claims.put("iat", nowSeconds);
+      claims.put("nbf", nowSeconds);
+      claims.put("exp", nowSeconds + 30);
+
+      return Jwts
+        .builder()
+        .setHeaderParam("typ", "JWT")
+        .setClaims(claims)
+        .signWith(loadPrivateKey(), SignatureAlgorithm.ES256)
+        .compact();
+    } catch (Exception e) {
+      throw new RuntimeException("Error generating VP JWT", e);
+    }
+  }
+
   private Key getKey() {
     byte[] keyBytes = Decoders.BASE64.decode(secretKey);
     return Keys.hmacShaKeyFor(keyBytes);
@@ -231,7 +301,7 @@ public class JwtService {
     }
 
     // Paso 3: Obtener la clave pública del servidor DID
-    String didUrl = String.format("%s/oidc/did/%s", aud, verifierDidkey);
+    String didUrl = String.format("%s/oidc/jwks", aud);
 
     PublicKey publicKey = getPublicKeyFromServer(didUrl);
 
@@ -253,9 +323,9 @@ public class JwtService {
   }
 
   // Obtiene la clave pública desde el servidor DID
-  private PublicKey getPublicKeyFromServer(String didUrl) throws Exception {
+  private PublicKey getPublicKeyFromServer(String jwksUrl) throws Exception {
     RestTemplate restTemplate = new RestTemplate();
-    String jsonResponse = restTemplate.getForObject(didUrl, String.class);
+    String jsonResponse = restTemplate.getForObject(jwksUrl, String.class);
 
     KeysContainer keyContainer = objectMapper.readValue(
       jsonResponse,
@@ -268,27 +338,22 @@ public class JwtService {
     }
 
     // Buscar la clave con el `kid` correspondiente
-    KeysContainer.Key matchingKey = keyContainer
+    KeysContainer.Key firstKey = keyContainer
       .getKeys()
       .stream()
-      .filter(key -> verifierDidkey.equals(key.getKid()))
       .findFirst()
-      .orElseThrow(() ->
-        new IllegalArgumentException(
-          "Key with specified kid not found: " + verifierDidkey
-        )
-      );
+      .orElseThrow(() -> new IllegalArgumentException("No keys found"));
 
     // Validar que la clave tenga la curva esperada
-    if (!"P-256".equals(matchingKey.getCrv())) {
+    if (!"P-256".equals(firstKey.getCrv())) {
       throw new IllegalArgumentException(
-        "Unsupported curve: " + matchingKey.getCrv()
+        "Unsupported curve: " + firstKey.getCrv()
       );
     }
 
     // Extraer las coordenadas x e y
-    String x = matchingKey.getX();
-    String y = matchingKey.getY();
+    String x = firstKey.getX();
+    String y = firstKey.getY();
 
     // Decodificar las coordenadas x e y desde Base64 URL
     byte[] xBytes = Base64.getUrlDecoder().decode(x);
