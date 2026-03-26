@@ -21,7 +21,6 @@ public class CorsFilterConfig {
         "https://dome-certification.dome-marketplace-dev2.org",
         "https://dome-certification.dome-marketplace-prd.org",
         "https://dome-certification.dome-marketplace.org",
-        "https://dome-certification.dome-marketplace.eu",
         "http://localhost:4200"
       )
     );

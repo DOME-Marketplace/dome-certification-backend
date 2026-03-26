@@ -52,9 +52,7 @@ public class UserService {
     String countryCode,
     String organizationName,
     String didkey,
-    UserRole role,
-    String organization_id,
-    String organization_email
+    UserRole role
   ) {
     UserEntity userEntity = UserEntity
       .builder()
@@ -65,8 +63,6 @@ public class UserService {
       .organization_name(organizationName)
       .role(role)
       .didkey(didkey)
-      .organization_id(organization_id)
-      .organization_email(organization_email)
       .last_seen(new Date())
       .build();
 
@@ -116,13 +112,12 @@ public class UserService {
       .username(user.getUsername())
       .firstname(user.getFirstname())
       .lastname(user.getLastname())
-      .organization_country_code(user.getCountry_code())
+      .country_code(user.getCountry_code())
+      .address(user.getAddress())
       .organization_name(user.getOrganization_name())
-      .organization_id(user.getOrganization_id())
-      .email(user.getEmail())
+      .website(user.getWebsite())
       .last_seen(user.getLast_seen())
       .role(user.getRole())
-      .organization_email(user.getOrganization_email())
       .build();
   }
 
@@ -146,34 +141,13 @@ public class UserService {
       );
   }
 
-  public UserEntity updateDidKeyAndRole(
-    UserEntity user,
-    String didKey,
-    UserRole role
-  ) {
+  public UserEntity updateDidKey(UUID userId, String didKey) {
+    UserEntity user = userRepository
+      .findById(userId)
+      .orElseThrow(() ->
+        new IllegalArgumentException("User not found with ID: " + userId)
+      );
     user.setDidkey(didKey);
-    user.setRole(role);
-    return userRepository.save(user);
-  }
-
-  public UserEntity updateRole(UserEntity user, UserRole role) {
-    user.setRole(role);
-    return userRepository.save(user);
-  }
-
-  public UserEntity updateOrganizationId(
-    UserEntity user,
-    String organizationId
-  ) {
-    user.setOrganization_id(organizationId);
-    return userRepository.save(user);
-  }
-
-  public UserEntity updateOrganizationEmail(
-    UserEntity user,
-    String organizationEmail
-  ) {
-    user.setOrganization_email(organizationEmail);
     return userRepository.save(user);
   }
 }

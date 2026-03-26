@@ -1,10 +1,5 @@
 package com.dekraspain.backend.template.shared.email.service;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
-import java.net.URI;
-import java.net.URISyntaxException;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
@@ -14,6 +9,10 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
+
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j // Lombok generará el logger automáticamente
@@ -27,19 +26,6 @@ public class EmailService {
 
   @Value("${email.address}")
   String emailAddress;
-
-  @Value("${jwt.oauth.redirect-uri}")
-  private String redirectUri;
-
-  private String extractBaseUrl(String url) {
-    try {
-      URI uri = new URI(url);
-      return uri.getScheme() + "://" + uri.getHost();
-    } catch (URISyntaxException e) {
-      log.error("Invalid redirect URI: " + url, e);
-      return ""; // o lanza una excepción si prefieres
-    }
-  }
 
   @Async
   public void sendEmailWithTemplate(
@@ -78,9 +64,8 @@ public class EmailService {
       helper.setFrom(emailAddress);
       helper.setTo(to);
       helper.setSubject(subject);
-      String baseUrl = extractBaseUrl(redirectUri);
+
       Context context = new Context();
-      context.setVariable("baseUrl", baseUrl);
       String htmlContent = templateEngine.process(templateName, context);
 
       // Set the HTML content of the email

@@ -68,10 +68,6 @@ public class UserEntity implements UserDetails {
 
   public String organization_name;
 
-  public String organization_email;
-
-  public String organization_id;
-
   public String website;
 
   public String didkey;

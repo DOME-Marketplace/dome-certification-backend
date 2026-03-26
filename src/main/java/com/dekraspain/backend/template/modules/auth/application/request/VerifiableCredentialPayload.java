@@ -1,16 +1,9 @@
 package com.dekraspain.backend.template.modules.auth.application.request;
 
 import java.util.List;
-
-import com.fasterxml.jackson.annotation.JsonAlias;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import lombok.Data;
 
 @Data
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class VerifiableCredentialPayload {
 
   private String aud;
@@ -20,26 +13,20 @@ public class VerifiableCredentialPayload {
   private long exp;
   private long iat;
   private String jti;
-  private VerifiableCredential vc;
-  private String client_id;
+  private VerifiableCredential verifiableCredential;
 
   @Data
-  @JsonIgnoreProperties(ignoreUnknown = true)
   public static class VerifiableCredential {
 
-    @JsonProperty("@context")
     private List<String> context;
-
     private String id;
     private List<String> type;
     private CredentialSubject credentialSubject;
     private String expirationDate;
     private String issuanceDate;
-    private Object issuer;
+    private String issuer;
     private String validFrom;
     private String validUntil;
-    private String description;
-    private Object credentialStatus;
   }
 
   @Data
@@ -52,7 +39,7 @@ public class VerifiableCredentialPayload {
   public static class Mandate {
 
     private String id;
-    private LifeSpan life_span;
+    private LifeSpan lifeSpan;
     private Mandatee mandatee;
     private Mandator mandator;
     private List<Power> power;
@@ -62,8 +49,8 @@ public class VerifiableCredentialPayload {
   @Data
   public static class LifeSpan {
 
-    private String start_date_time;
-    private String end_date_time;
+    private String startDateTime;
+    private String endDateTime;
   }
 
   @Data
@@ -71,12 +58,9 @@ public class VerifiableCredentialPayload {
 
     private String id;
     private String email;
-    @JsonAlias("firstName")
-    private String first_name;
-    @JsonAlias("lastName")
-    private String last_name;
-    private String mobile_phone;
-    private String nationality;
+    private String firstName;
+    private String lastName;
+    private String mobilePhone;
   }
 
   @Data
@@ -84,21 +68,7 @@ public class VerifiableCredentialPayload {
 
     private String commonName;
     private String country;
-    @JsonAlias("emailAddress")
-    private String email;
-    private String id;
-    private String organization;
-    private String organizationIdentifier;
-    private String serialNumber;
-  }
-
-  @Data
-  @JsonIgnoreProperties(ignoreUnknown = true)
-  public static class Issuer {
-
-    private String commonName;
-    private String country;
-    private String id;
+    private String emailAddress;
     private String organization;
     private String organizationIdentifier;
     private String serialNumber;
@@ -108,17 +78,10 @@ public class VerifiableCredentialPayload {
   public static class Power {
 
     private String id;
-
-    @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
-    @JsonAlias("action")
-    private List<String> tmf_action;
-    @JsonAlias("domain")
-    private String tmf_domain;
-    
-    @JsonAlias("function")
-    private String tmf_function;
-    @JsonAlias("type")
-    private String tmf_type;
+    private List<String> tmfAction;
+    private String tmfDomain;
+    private String tmfFunction;
+    private String tmfType;
   }
 
   @Data
@@ -126,8 +89,7 @@ public class VerifiableCredentialPayload {
 
     private String commonName;
     private String country;
-    @JsonAlias("emailAddress")
-    private String email;
+    private String emailAddress;
     private String organization;
     private String organizationIdentifier;
     private String serialNumber;
