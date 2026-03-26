@@ -323,7 +323,14 @@ public class ProductOfferingController {
       } else {
         log.info("certificate called - no authentication in SecurityContext");
       }
-//  
+
+      // Normalize id_PO to avoid double prefix in label credential generation
+      String normalizedIdPo = idPo;
+      if (idPo.startsWith("urn:ngsi-ld:product-specification:")) {
+        normalizedIdPo = idPo.replace("urn:ngsi-ld:product-specification:", "");
+      }
+      log.info("Normalized id_PO: {} -> {}", idPo, normalizedIdPo);
+
       ProductOfferingRequest request = ProductOfferingRequest
         .builder()
         .service_name(serviceName)
@@ -334,7 +341,7 @@ public class ProductOfferingController {
         .url_organization(urlOrganization)
         .email_organization(emailOrganization)
         .VAT_ID(vatId)
-        .id_PO(idPo)
+        .id_PO(normalizedIdPo)
         .requested_compliances_level(compliancesLevel)
         .build();
 
