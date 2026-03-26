@@ -397,7 +397,7 @@ public class ProductOfferingController {
     );
 
     // Send email
-    String email = productOffering.getUser().getEmail();
+    String email = productOffering.getEmail_organization();
     String subject = String.format(
       "Compliance of %s %s is %s",
       productOffering.getService_name(),
@@ -451,7 +451,7 @@ public class ProductOfferingController {
       }
 
       // Datos para el correo
-      String email = productOffering.getUser().getEmail();
+      String email = productOffering.getEmail_organization();
       String subject = String.format(
         "Compliance of %s %s",
         productOffering.getService_name(),
@@ -615,14 +615,14 @@ public class ProductOfferingController {
       headers.setContentType(MediaType.APPLICATION_JSON);
 
       // Validar que el usuario no sea null
-      if (productOffering.getUser() == null) {
+      /*if (productOffering.getUser() == null) {
         log.error("ProductOffering {} has no associated user", productOffering.getId());
         return ResponseEntity
           .status(HttpStatus.BAD_REQUEST)
           .body("ProductOffering has no associated user");
-      }
+      }*/
 
-      String ownerEmail = productOffering.getUser().getEmail();
+      String ownerEmail = productOffering.getEmail_organization();
       log.info("Product Offering User Email: {}", ownerEmail);
       
       Map<String, Object> body = Map.of(
