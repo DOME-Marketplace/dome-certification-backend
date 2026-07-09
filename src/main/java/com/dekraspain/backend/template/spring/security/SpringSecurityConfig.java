@@ -1,6 +1,5 @@
 package com.dekraspain.backend.template.spring.security;
 
-import com.dekraspain.backend.template.modules.auth.domain.provider.AuthenticationProviderImpl;
 import com.dekraspain.backend.template.modules.user.domain.model.UserRole;
 import com.dekraspain.backend.template.spring.Jwt.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +20,6 @@ public class SpringSecurityConfig {
   private static final String BASE_PATH_V1 = "/api/v1";
 
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
-  private final AuthenticationProviderImpl authProvider;
   private final com.dekraspain.backend.template.spring.security.M2MTokenVerifier m2mTokenVerifier;
 
   @Bean
@@ -73,7 +71,6 @@ public class SpringSecurityConfig {
       .sessionManagement(sessionManager ->
         sessionManager.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
       )
-      .authenticationProvider(authProvider)
       .addFilterBefore(
         jwtAuthenticationFilter,
         UsernamePasswordAuthenticationFilter.class

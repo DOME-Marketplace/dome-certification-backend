@@ -1,7 +1,5 @@
 package com.dekraspain.backend.template.modules.auth.domain.service;
 
-import com.dekraspain.backend.template.modules.auth.application.request.LoginRequest;
-import com.dekraspain.backend.template.modules.auth.application.request.RegisterRequest;
 import com.dekraspain.backend.template.modules.auth.application.request.VerifiableCredentialPayload;
 import com.dekraspain.backend.template.modules.auth.application.response.AuthResponse;
 import com.dekraspain.backend.template.modules.user.domain.model.UserRole;
@@ -10,9 +8,6 @@ import com.dekraspain.backend.template.modules.user.domain.service.UserService;
 import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
 import com.dekraspain.backend.template.spring.Jwt.JwtService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -21,33 +16,7 @@ public class AuthService {
 
   private final UserService userService;
   private final JwtService jwtService;
-  private final PasswordEncoder passwordEncoder;
-  private final AuthenticationManager authenticationManager;
   private final AccessLogService accessLogService;
-
-  public AuthResponse login(LoginRequest request) {
-    // Obtención del usuario mediante el UserService
-    UserEntity user = userService.getUserByUsernameOrEmail(
-      request.getUsername()
-    );
-    // Autenticación del usuario
-    authenticationManager.authenticate(
-      new UsernamePasswordAuthenticationToken(user, request.getPassword())
-    );
-
-    // Generación del token JWT
-    String token = jwtService.getToken(user);
-
-    //Actualziar lastseen
-    userService.updateLastSeen(user);
-    accessLogService.logAccess(user);
-
-    return AuthResponse
-      .builder()
-      .acces_token(token)
-      .user(userService.mapToDTO(user))
-      .build();
-  }
 
   public AuthResponse loginProvider(
     String didkey,
@@ -112,6 +81,13 @@ public class AuthService {
     VerifiableCredentialPayload.CredentialSubject credentialSubject,
     UserRole role
   ) {
+    // El id del mandatee es opcional; se normaliza a null cuando no viene
+    // para no chocar con la restricción de unicidad de didkey.
+    String rawDidkey = credentialSubject.getMandate().getMandatee().getId();
+    String didkey = (rawDidkey != null && !rawDidkey.isBlank())
+      ? rawDidkey
+      : null;
+
     // Creación del nuevo usuario
     UserEntity newUser = userService.createUserProvider(
       credentialSubject.getMandate().getMandatee().getEmail(),
@@ -119,7 +95,7 @@ public class AuthService {
       credentialSubject.getMandate().getMandatee().getLast_name(),
       credentialSubject.getMandate().getMandator().getCountry(),
       credentialSubject.getMandate().getMandator().getOrganization(),
-      credentialSubject.getMandate().getMandatee().getId(),
+      didkey,
       role,
       credentialSubject.getMandate().getMandator().getOrganizationIdentifier(),
       credentialSubject.getMandate().getMandator().getEmail()
@@ -128,32 +104,6 @@ public class AuthService {
     // Generación del token JWT
     String token = jwtService.getToken(newUser);
     accessLogService.logAccess(newUser);
-    return AuthResponse
-      .builder()
-      .acces_token(token)
-      .user(userService.mapToDTO(newUser))
-      .build();
-  }
-
-  public AuthResponse register(RegisterRequest request) {
-    // Creación del nuevo usuario
-    UserEntity newUser = userService.createUser(
-      request.getUsername(),
-      request.getEmail(),
-      passwordEncoder.encode(request.getPassword()),
-      request.getFirstname(),
-      request.getLastname(),
-      request.getCountry_code(),
-      request.getAddress(),
-      request.getOrganization_name(),
-      request.getWebsite(),
-      UserRole.CUSTOMER // Rol predeterminado
-    );
-
-    // Generación del token JWT
-    String token = jwtService.getToken(newUser);
-    accessLogService.logAccess(newUser);
-
     return AuthResponse
       .builder()
       .acces_token(token)

@@ -1,7 +1,5 @@
 package com.dekraspain.backend.template.modules.auth.application.controller;
 
-import com.dekraspain.backend.template.modules.auth.application.request.LoginRequest;
-import com.dekraspain.backend.template.modules.auth.application.request.RegisterRequest;
 import com.dekraspain.backend.template.modules.auth.application.request.VerifiableCredentialPayload;
 import com.dekraspain.backend.template.modules.auth.application.response.AuthResponse;
 import com.dekraspain.backend.template.modules.auth.domain.service.AuthService;
@@ -10,21 +8,14 @@ import com.dekraspain.backend.template.modules.user.domain.service.UserService;
 import com.dekraspain.backend.template.spring.Jwt.JwtService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Auth")
@@ -36,55 +27,6 @@ public class AuthController {
   private final AuthService authService;
   private final UserService userService;
   private final JwtService jwtService;
-
-  @Operation(summary = "Login")
-  @PostMapping(value = "login")
-  public ResponseEntity<AuthResponse> login(
-    @Valid @RequestBody LoginRequest request
-  ) {
-    if (
-      !userService.existsByUsername(request.username) &&
-      !userService.existsByEmail(request.username)
-    ) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-    }
-
-    return ResponseEntity.ok(authService.login(request));
-  }
-
-  @Operation(summary = "Register")
-  @PostMapping(value = "register")
-  public ResponseEntity<AuthResponse> register(
-    @Valid @RequestBody RegisterRequest request
-  ) {
-    if (
-      userService.existsByUsername(request.username) ||
-      userService.existsByEmail(request.username)
-    ) {
-      return ResponseEntity.status(HttpStatus.ALREADY_REPORTED).body(null);
-    }
-
-    return ResponseEntity.ok(authService.register(request));
-  }
-
-  @ResponseStatus(HttpStatus.BAD_REQUEST)
-  @ExceptionHandler(MethodArgumentNotValidException.class)
-  public Map<String, String> handleValidationExceptions(
-    MethodArgumentNotValidException ex
-  ) {
-    Map<String, String> errors = new HashMap<>();
-
-    ex
-      .getBindingResult()
-      .getAllErrors()
-      .forEach(error -> {
-        String fieldName = ((FieldError) error).getField();
-        String errorMessage = error.getDefaultMessage();
-        errors.put(fieldName, errorMessage);
-      });
-
-    return errors;
-  }
 
   @Operation(summary = "oauth-token")
   @GetMapping(value = "oauth-token")
@@ -156,11 +98,19 @@ public class AuthController {
         ? UserRole.EMPLOYEE
         : UserRole.CUSTOMER;
 
-      // Si el didkey ya existe, proceder con el logins
-      if (userService.existsByDidkey(mandatee.getId())) {
+      // El id del mandatee es opcional: las cuentas nuevas no lo traen.
+      // Sólo se valida por didkey cuando la credencial incluye el mandatee.id;
+      // en caso contrario se identifica al usuario por el email de la credencial.
+      String rawDidkey = mandatee.getId();
+      String didkey = (rawDidkey != null && !rawDidkey.isBlank())
+        ? rawDidkey
+        : null;
+
+      // Si el didkey existe, proceder con el login
+      if (didkey != null && userService.existsByDidkey(didkey)) {
         return ResponseEntity.ok(
           authService.loginProvider(
-            mandatee.getId(),
+            didkey,
             role,
             mandator.getOrganizationIdentifier(),
             mandator.getEmail()
@@ -173,7 +123,7 @@ public class AuthController {
         return ResponseEntity.ok(
           authService.loginProviderAndUpdate(
             mandatee.getEmail(),
-            mandatee.getId(),
+            didkey,
             role,
             mandator.getOrganizationIdentifier(),
             mandator.getEmail()

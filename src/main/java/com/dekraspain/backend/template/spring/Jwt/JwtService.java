@@ -31,6 +31,7 @@ import com.dekraspain.backend.template.modules.auth.application.request.KeysCont
 import com.dekraspain.backend.template.modules.auth.application.request.VerifiableCredentialPayload;
 import com.dekraspain.backend.template.modules.user.persistence.entity.UserEntity;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.jsonwebtoken.Claims;
@@ -64,7 +65,10 @@ public class JwtService {
   private String learCredentialJwt;
 
   private final long expirationTime = 86400000;
-  private final ObjectMapper objectMapper = new ObjectMapper();
+  // Tolerante a campos desconhecidos: o issuer adiciona campos novos às
+  // credenciais (ex.: mandatee.employeeId) que não estão nos DTOs.
+  private final ObjectMapper objectMapper = new ObjectMapper()
+    .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
   public String getToken(UserEntity user) {
     Map<String, Object> extraClaims = new HashMap<>();

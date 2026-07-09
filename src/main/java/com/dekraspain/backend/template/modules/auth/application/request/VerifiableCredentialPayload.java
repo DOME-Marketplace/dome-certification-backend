@@ -43,12 +43,14 @@ public class VerifiableCredentialPayload {
   }
 
   @Data
+  @JsonIgnoreProperties(ignoreUnknown = true)
   public static class CredentialSubject {
 
     private Mandate mandate;
   }
 
   @Data
+  @JsonIgnoreProperties(ignoreUnknown = true)
   public static class Mandate {
 
     private String id;
@@ -60,6 +62,7 @@ public class VerifiableCredentialPayload {
   }
 
   @Data
+  @JsonIgnoreProperties(ignoreUnknown = true)
   public static class LifeSpan {
 
     private String start_date_time;
@@ -67,6 +70,7 @@ public class VerifiableCredentialPayload {
   }
 
   @Data
+  @JsonIgnoreProperties(ignoreUnknown = true)
   public static class Mandatee {
 
     private String id;
@@ -80,6 +84,7 @@ public class VerifiableCredentialPayload {
   }
 
   @Data
+  @JsonIgnoreProperties(ignoreUnknown = true)
   public static class Mandator {
 
     private String commonName;
@@ -105,6 +110,7 @@ public class VerifiableCredentialPayload {
   }
 
   @Data
+  @JsonIgnoreProperties(ignoreUnknown = true)
   public static class Power {
 
     private String id;
@@ -122,6 +128,7 @@ public class VerifiableCredentialPayload {
   }
 
   @Data
+  @JsonIgnoreProperties(ignoreUnknown = true)
   public static class Signer {
 
     private String commonName;
