@@ -14,6 +14,7 @@ public class CompliancesCriteriaDataLoader implements CommandLineRunner {
 
   private static final String RULES_VERSION_CD2503 = "CD25.03";
   private static final String LABEL_LEVEL_BASELINE = "BL";
+  private static final String LABEL_LEVEL_PROFESSIONAL = "P";
 
   @Override
   public void run(String... args) {
@@ -442,6 +443,149 @@ public class CompliancesCriteriaDataLoader implements CommandLineRunner {
           )
           .rulesVersion(RULES_VERSION_CD2503)
           .labelLevel(LABEL_LEVEL_BASELINE)
+          .build()
+      );
+    }
+    // ---- CYBERSECURITY (Professional-tier: CS-20) ----
+    if (
+      !repository.existsByCodeAndRulesVersion("CS-20", RULES_VERSION_CD2503)
+    ) {
+      repository.save(
+        CompliancesCriteriaEntity
+          .builder()
+          .category("CYBERSECURITY")
+          .code("CS-20")
+          .criteria(
+            "User documentation: the Company provides up-to-date information on the secure configuration and known vulnerabilities of the Offering for Cloud Customers."
+          )
+          // Gaia-X CD25.03 criterion P3.1.18 "User documentation" (§5.5 Cybersecurity) — confirmed
+          .link(
+            "https://docs.gaia-x.eu/policy-rules-committee/compliance-document/25.03/criteria_cloud_services/#P3.1.18"
+          )
+          .rulesVersion(RULES_VERSION_CD2503)
+          .labelLevel(LABEL_LEVEL_PROFESSIONAL)
+          .build()
+      );
+    }
+    // ---- PORTABILITY (Professional-tier criteria) ----
+    if (
+      !repository.existsByCodeAndRulesVersion("PT-1", RULES_VERSION_CD2503)
+    ) {
+      repository.save(
+        CompliancesCriteriaEntity
+          .builder()
+          .category("PORTABILITY")
+          .code("PT-1")
+          .criteria(
+            "The Company implements practices for facilitating the switching of services and the porting of Cloud Customer data in a structured, commonly used and machine-readable format."
+          )
+          // Gaia-X CD25.03 criterion P4.1.1 (§5.6 Portability)
+          .link(
+            "https://docs.gaia-x.eu/policy-rules-committee/compliance-document/25.03/criteria_cloud_services/#P4.1.1"
+          )
+          .rulesVersion(RULES_VERSION_CD2503)
+          .labelLevel(LABEL_LEVEL_PROFESSIONAL)
+          .build()
+      );
+    }
+    if (
+      !repository.existsByCodeAndRulesVersion("PT-2", RULES_VERSION_CD2503)
+    ) {
+      repository.save(
+        CompliancesCriteriaEntity
+          .builder()
+          .category("PORTABILITY")
+          .code("PT-2")
+          .criteria(
+            "The Company provides pre-contractual information to Cloud Customers, with sufficiently detailed, clear and transparent information regarding the processes of Cloud Customer data portability, technical requirements, timeframes and charges that apply in case a professional user wants to switch from the Offering to another provider or port Cloud Customer data back to its own IT systems."
+          )
+          // Gaia-X CD25.03 criterion P4.1.2 (§5.6 Portability)
+          .link(
+            "https://docs.gaia-x.eu/policy-rules-committee/compliance-document/25.03/criteria_cloud_services/#P4.1.2"
+          )
+          .rulesVersion(RULES_VERSION_CD2503)
+          .labelLevel(LABEL_LEVEL_PROFESSIONAL)
+          .build()
+      );
+    }
+    // ---- SUSTAINABILITY (Professional-tier criteria) ----
+    if (
+      !repository.existsByCodeAndRulesVersion("ST-1", RULES_VERSION_CD2503)
+    ) {
+      repository.save(
+        CompliancesCriteriaEntity
+          .builder()
+          .category("SUSTAINABILITY")
+          .code("ST-1")
+          .criteria(
+            "The Company provides transparency on the environmental impact of the Offering provided."
+          )
+          // Gaia-X CD25.03 criterion P6.1.1 (§5.8 Sustainability)
+          .link(
+            "https://docs.gaia-x.eu/policy-rules-committee/compliance-document/25.03/criteria_cloud_services/#P6.1.1"
+          )
+          .rulesVersion(RULES_VERSION_CD2503)
+          .labelLevel(LABEL_LEVEL_PROFESSIONAL)
+          .build()
+      );
+    }
+    if (
+      !repository.existsByCodeAndRulesVersion("ST-2", RULES_VERSION_CD2503)
+    ) {
+      repository.save(
+        CompliancesCriteriaEntity
+          .builder()
+          .category("SUSTAINABILITY")
+          .code("ST-2")
+          .criteria(
+            "The Company ensures that the Offering meets or relies on an infrastructure which meets a high standard in energy efficiency, meeting an annual target of PUE of 1.3 in cool climates and 1.4 in warm climates."
+          )
+          // Gaia-X CD25.03 criterion P6.1.2 (§5.8 Sustainability)
+          .link(
+            "https://docs.gaia-x.eu/policy-rules-committee/compliance-document/25.03/criteria_cloud_services/#P6.1.2"
+          )
+          .rulesVersion(RULES_VERSION_CD2503)
+          .labelLevel(LABEL_LEVEL_PROFESSIONAL)
+          .build()
+      );
+    }
+    if (
+      !repository.existsByCodeAndRulesVersion("ST-3", RULES_VERSION_CD2503)
+    ) {
+      repository.save(
+        CompliancesCriteriaEntity
+          .builder()
+          .category("SUSTAINABILITY")
+          .code("ST-3")
+          .criteria(
+            "The Company ensures that the Offering meets or relies on an infrastructure for which electricity demand will be matched by 75% renewable energy or hourly carbon-free energy by 31st December 2025, and 100% by 31st December 2030."
+          )
+          // Gaia-X CD25.03 criterion P6.1.3 (§5.8 Sustainability)
+          .link(
+            "https://docs.gaia-x.eu/policy-rules-committee/compliance-document/25.03/criteria_cloud_services/#P6.1.3"
+          )
+          .rulesVersion(RULES_VERSION_CD2503)
+          .labelLevel(LABEL_LEVEL_PROFESSIONAL)
+          .build()
+      );
+    }
+    if (
+      !repository.existsByCodeAndRulesVersion("ST-4", RULES_VERSION_CD2503)
+    ) {
+      repository.save(
+        CompliancesCriteriaEntity
+          .builder()
+          .category("SUSTAINABILITY")
+          .code("ST-4")
+          .criteria(
+            "The Company ensures that the Service Offering meets or relies on an infrastructure Services Offering that will meet a high standard for water conservation demonstrated through the application of a location and source sensitive water usage effectiveness (WUE) target of 0.4 L/kWh in areas with water stress."
+          )
+          // Gaia-X CD25.03 criterion P6.1.4 (§5.8 Sustainability)
+          .link(
+            "https://docs.gaia-x.eu/policy-rules-committee/compliance-document/25.03/criteria_cloud_services/#P6.1.4"
+          )
+          .rulesVersion(RULES_VERSION_CD2503)
+          .labelLevel(LABEL_LEVEL_PROFESSIONAL)
           .build()
       );
     }

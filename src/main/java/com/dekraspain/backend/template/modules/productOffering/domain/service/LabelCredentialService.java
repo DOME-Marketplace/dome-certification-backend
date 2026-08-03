@@ -55,9 +55,13 @@ public class LabelCredentialService {
     @Value("${app.version:1.0.0}")
     private String appVersion;
 
-    public LabelCredentialPayloadDTO generateLabelCredentialPayload(Long poId, List<ComplianceCriteriaAndProfile> payload, UserEntity user, String validUntil) {
+    public LabelCredentialPayloadDTO generateLabelCredentialPayload(Long poId, List<ComplianceCriteriaAndProfile> payload, UserEntity user, String validUntil, String labelLevel) {
         ProductOfferingEntity po = productOfferingRepository.findById(poId)
                 .orElseThrow(() -> new IllegalArgumentException("ProductOffering not found"));
+
+        // Defensive default: an absent/blank level must never issue a null-level credential.
+        // Matches the LabelCredentialRequest schema ("Defaults to BL if omitted").
+        String effectiveLabelLevel = (labelLevel == null || labelLevel.isBlank()) ? "BL" : labelLevel;
 
         List<LabelCredentialPayloadDTO.CompliantCredential> compliantCredentials = new ArrayList<>();
         List<String> validatedCriteria = new ArrayList<>();
@@ -84,7 +88,7 @@ public class LabelCredentialService {
 
         LabelCredentialPayloadDTO.CredentialSubject credentialSubject = LabelCredentialPayloadDTO.CredentialSubject.builder()
                 .id("urn:ngsi-ld:product-specification:" + po.getId_PO())
-                .gxLabelLevel("BL")
+                .gxLabelLevel(effectiveLabelLevel)
                 .gxEngineVersion(appVersion)
                 .gxRulesVersion(rulesVersion[0] != null ? rulesVersion[0] : "CD25.03")
                 .gxCompliantCredentials(compliantCredentials)

@@ -575,7 +575,8 @@ public class ProductOfferingController {
         request.getPoId(),
         request.getPayload(),
         user,
-        request.getValidUntil()
+        request.getValidUntil(),
+        request.getLabelLevel()
       );
       ProductOfferingEntity productOffering = productService.getProductOfferingById(
         request.getPoId()

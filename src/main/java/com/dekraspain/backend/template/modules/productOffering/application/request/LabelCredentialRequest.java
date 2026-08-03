@@ -40,4 +40,7 @@ public class LabelCredentialRequest {
     @Schema(description = "Credential owner email")
     private String credential_owner_email;
 
+    @Schema(description = "Compliance label level: BL (Baseline), P (Professional), PP (Professional Plus). Defaults to BL if omitted.", example = "P")
+    private String labelLevel;
+
 }
