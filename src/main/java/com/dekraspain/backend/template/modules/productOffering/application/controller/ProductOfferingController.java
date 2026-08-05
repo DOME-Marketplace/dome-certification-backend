@@ -668,7 +668,7 @@ public class ProductOfferingController {
       );
 
       ResponseEntity<String> issuerResponse = restTemplate.postForEntity(
-        issuerUrl + "/issuer-api/vci/v1/issuances/external",
+        issuerUrl + "/vci/v1/issuances",
         httpEntity,
         String.class
       );
@@ -769,7 +769,7 @@ public class ProductOfferingController {
       );
 
       ResponseEntity<String> issuerResponse = restTemplate.postForEntity(
-        issuerUrl + "/issuer-api/vci/v1/issuances/external",
+        issuerUrl + "/vci/v1/issuances",
         httpEntity,
         String.class
       );
