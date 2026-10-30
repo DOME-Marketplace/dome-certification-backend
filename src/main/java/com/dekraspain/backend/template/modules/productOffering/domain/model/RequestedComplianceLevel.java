@@ -33,6 +33,26 @@ public class RequestedComplianceLevel {
     this.value = value;
   }
 
+  // Maps the variants the Marketplace may send ("BL", "baseline", "PP", "Professional Plus", ...)
+  // to the canonical value. Unknown or blank input falls back to Baseline: the requested level is
+  // the provider's wish, not the outcome, so it must not make the whole intake fail.
+  public static String normalize(String raw) {
+    if (raw == null) return BASELINE;
+    String v = raw.trim().toLowerCase().replace("_", " ").replace("-", " ");
+    switch (v) {
+      case "professional+":
+      case "professional plus":
+      case "pp":
+        return PROFESSIONAL_PLUS;
+      case "professional":
+      case "p":
+      case "pr":
+        return PROFESSIONAL;
+      default:
+        return BASELINE;
+    }
+  }
+
   public String getValue() {
     return value;
   }

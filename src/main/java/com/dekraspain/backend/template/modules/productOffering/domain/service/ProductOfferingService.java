@@ -88,35 +88,7 @@ public class ProductOfferingService {
 
     productOfferingRepository.save(productOffering);
 
-    Path uploadPath = Paths.get(uploadDir);
-    if (!Files.exists(uploadPath)) {
-      Files.createDirectories(uploadPath);
-    }
-
-    for (MultipartFile file : files) {
-      String fileHash = calculateFileHash(file);
-      // Guardar el archivo en el almacenamiento de Spring Boot
-      String fileName = StringUtils.cleanPath(file.getOriginalFilename());
-      Path staticFilePath = uploadPath.resolve(fileName);
-      Files.copy(
-        file.getInputStream(),
-        staticFilePath,
-        StandardCopyOption.REPLACE_EXISTING
-      );
-
-      String fileDownloadUri = uploadDir + "/" + fileName;
-      // Crear una nueva instancia de ComplianceProfileEntity para almacenar el archivo
-      ComplianceProfileEntity complianceProfile = ComplianceProfileEntity
-        .builder()
-        .fileName(fileName)
-        .productOffering(productOffering)
-        .url(fileDownloadUri)
-        .hash(fileHash)
-        .build();
-
-      // Guardar el ComplianceProfileEntity en la base de datos
-      complianceProfileRepository.save(complianceProfile);
-    }
+    storeComplianceFiles(productOffering, files);
   }
   public void createProductOfferingM2M(
     ProductOfferingRequest request,
@@ -143,11 +115,33 @@ public class ProductOfferingService {
       .isExpirationEmailSent(false)
       .isExpirationWarningEmailSent(false)
       .requestedComplianceLevel(
-        new RequestedComplianceLevel(request.getRequested_compliances_level())
+        new RequestedComplianceLevel(
+          RequestedComplianceLevel.normalize(request.getRequested_compliances_level())
+        )
       )
       .build();
 
     productOfferingRepository.save(productOffering);
+
+    storeComplianceFiles(productOffering, files);
+  }
+
+  // Stores each uploaded file under a name unique to this product offering. Files used to be
+  // saved under their original name with REPLACE_EXISTING, so two providers uploading the same
+  // template name ("Compliance Self-attestation form_CSP_DOME March 2025.pdf") overwrote each other.
+  // fileName keeps the original name for display; url points at the unique stored file.
+  private void storeComplianceFiles(
+    ProductOfferingEntity productOffering,
+    List<MultipartFile> files
+  ) throws IOException {
+    if (files == null || files.isEmpty()) {
+      logger.warn(
+        "Product offering {} ({}) created without compliance documents",
+        productOffering.getId(),
+        productOffering.getId_PO()
+      );
+      return;
+    }
 
     Path uploadPath = Paths.get(uploadDir);
     if (!Files.exists(uploadPath)) {
@@ -155,27 +149,30 @@ public class ProductOfferingService {
     }
 
     for (MultipartFile file : files) {
+      if (file == null || file.isEmpty()) {
+        continue;
+      }
       String fileHash = calculateFileHash(file);
-      // Guardar el archivo en el almacenamiento de Spring Boot
-      String fileName = StringUtils.cleanPath(file.getOriginalFilename());
-      Path staticFilePath = uploadPath.resolve(fileName);
+      String originalName = file.getOriginalFilename() != null
+        ? Paths.get(StringUtils.cleanPath(file.getOriginalFilename())).getFileName().toString()
+        : "document.pdf";
+      String storedName =
+        productOffering.getId() + "_" + fileHash.substring(0, 12) + "_" + originalName;
+      Path staticFilePath = uploadPath.resolve(storedName);
       Files.copy(
         file.getInputStream(),
         staticFilePath,
         StandardCopyOption.REPLACE_EXISTING
       );
 
-      String fileDownloadUri = uploadDir + "/" + fileName;
-      // Crear una nueva instancia de ComplianceProfileEntity para almacenar el archivo
       ComplianceProfileEntity complianceProfile = ComplianceProfileEntity
         .builder()
-        .fileName(fileName)
+        .fileName(originalName)
         .productOffering(productOffering)
-        .url(fileDownloadUri)
+        .url(uploadDir + "/" + storedName)
         .hash(fileHash)
         .build();
 
-      // Guardar el ComplianceProfileEntity en la base de datos
       complianceProfileRepository.save(complianceProfile);
     }
   }

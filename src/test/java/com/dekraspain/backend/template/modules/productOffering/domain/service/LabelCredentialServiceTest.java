@@ -100,7 +100,30 @@ class LabelCredentialServiceTest {
     assertEquals("gx:DataProtection", cc.getType());
     assertEquals("sha256-abc", cc.getGxDigestSRI());
 
-    assertTrue(subject.getGxValidatedCriteria().contains("https://example.org/#P2.1.1"));
+    assertTrue(subject.getGxValidatedCriteria()
+        .contains("https://w3id.org/gaia-x/specs/cd25.03/criterion/P2.1.1"));
     assertEquals("CD25.03", subject.getGxRulesVersion());
+  }
+
+  @Test
+  void criterionUriMatchesPrdLabelFormat() {
+    assertEquals(
+        "https://w3id.org/gaia-x/specs/cd25.03/criterion/P3.1.18",
+        LabelCredentialService.toCriterionUri(
+            "https://docs.gaia-x.eu/policy-rules-committee/compliance-document/25.03/criteria_cloud_services/#P3.1.18",
+            "CD25.03"));
+    assertEquals("https://example.org/no-anchor",
+        LabelCredentialService.toCriterionUri("https://example.org/no-anchor", "CD25.03"));
+  }
+
+  @Test
+  void digestSriConvertsHexSha256ToSriForm() {
+    // SHA-256 of the empty input
+    assertEquals(
+        "sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=",
+        LabelCredentialService.toDigestSri(
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
+    assertEquals("sha256-abc", LabelCredentialService.toDigestSri("sha256-abc"));
+    assertEquals("not-a-hash", LabelCredentialService.toDigestSri("not-a-hash"));
   }
 }

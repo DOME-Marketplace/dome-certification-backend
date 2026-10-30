@@ -54,7 +54,7 @@ public class M2MAuthenticationFilter extends OncePerRequestFilter {
     }
 
     if (!StringUtils.hasText(token)) {
-      log.debug("M2M filter: Authorization header missing or not Bearer for request {} {}", request.getMethod(), request.getRequestURI());
+      log.warn("M2M filter: Authorization header missing or not Bearer for request {} {}", request.getMethod(), request.getRequestURI());
       response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
       response.getWriter().write("M2M token missing or invalid");
       return;
@@ -69,7 +69,7 @@ public class M2MAuthenticationFilter extends OncePerRequestFilter {
     }
 
     if (!result.isValid()) {
-      log.info("M2M filter: token verification failed ({}) for request {} {}", result.getReason(), request.getMethod(), request.getRequestURI());
+      log.warn("M2M filter: token verification failed ({}: {}) for request {} {}", result.getReason(), result.getMessage(), request.getMethod(), request.getRequestURI());
       response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
       String msg = switch (result.getReason()) {
         case EXPIRED -> "M2M token expired: " + result.getMessage();

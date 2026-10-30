@@ -9,6 +9,7 @@ import com.dekraspain.backend.template.modules.productOffering.domain.model.Comp
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ComplianceStandardsDTO;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.LabelCredentialPayloadDTO;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingDTO;
+import com.dekraspain.backend.template.modules.productOffering.domain.model.RequestedComplianceLevel;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingStates;
 import com.dekraspain.backend.template.modules.productOffering.domain.model.ProductOfferingStatesDTO;
 import com.dekraspain.backend.template.modules.productOffering.domain.service.LabelCredentialService;
@@ -313,7 +314,7 @@ public class ProductOfferingController {
     @RequestPart("organization_url") String urlOrganization,
     @RequestPart("organization_vat_id") String vatId,
     @RequestPart("requested_compliance_level") String compliancesLevel,
-    @RequestPart("files") List<MultipartFile> files
+    @RequestPart(value = "files", required = false) List<MultipartFile> files
   ) {
     try {
       // Log entry and current principal to help identify authentication path (M2M vs user JWT)
@@ -330,6 +331,17 @@ public class ProductOfferingController {
         normalizedIdPo = idPo.replace("urn:ngsi-ld:product-specification:", "");
       }
       log.info("Normalized id_PO: {} -> {}", idPo, normalizedIdPo);
+      String normalizedLevel = RequestedComplianceLevel.normalize(compliancesLevel);
+      if (!normalizedLevel.equals(compliancesLevel)) {
+        log.warn("certificate intake {}: requested_compliance_level '{}' normalized to '{}'", normalizedIdPo, compliancesLevel, normalizedLevel);
+      }
+      log.info(
+        "certificate intake {}: service '{}', VAT {}, {} file(s)",
+        normalizedIdPo,
+        serviceName,
+        vatId,
+        files == null ? 0 : files.size()
+      );
 
       ProductOfferingRequest request = ProductOfferingRequest
         .builder()
@@ -346,7 +358,7 @@ public class ProductOfferingController {
         .build();
 
       productService.createProductOfferingM2M(request, files);
-      
+
       String emailSubject =
       "Compliance of " + serviceName + " " + serviceVersion + " created";
       
@@ -371,6 +383,7 @@ public class ProductOfferingController {
           )
         );
     } catch (IOException e) {
+      log.error("certificate intake {}: failed to store files", idPo, e);
       return ResponseEntity
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
         .body(
@@ -381,7 +394,7 @@ public class ProductOfferingController {
         );
     } catch (Exception e) {
       // Catch any other unexpected exceptions and log them
-      log.error("Unexpected error occurred", e);
+      log.error("certificate intake {}: unexpected error", idPo, e);
       return ResponseEntity
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
         .body(
