@@ -4,7 +4,7 @@ Certification intake from the DOME Marketplace (machine-to-machine).
 
 | | |
 |---|---|
-| Document version | 2.0, 2026-10-30. Replaces the September 2025 version |
+| Document version | 2.1, 2026-10-30. Replaces the September 2025 version |
 | Applies to | certification backend **1.4.5** and later (the changes are marked **[1.4.5]**) |
 | Audience | DOME Marketplace (FICODES) and anyone integrating with the certification tool |
 
@@ -87,24 +87,30 @@ Notes:
   Larger uploads are rejected with 500.
 - **Integrity:** the tool computes a SHA-256 of each file. That hash goes into the issued label credential
   (`gx:digestSRI`, format `sha256-<base64>`), so the document a label was based on can be verified later.
-- **Repeat calls:** **each call creates a new certification request.** There is no de-duplication on
-  `product_specification_id` yet, so a retry or a resend produces a duplicate request. Until this changes, send each
-  offering once, and coordinate any bulk resend with the certification team. _(Proposed, not yet implemented: a repeat
-  call for a request still `IN_PROGRESS` adds its documents to that request; a call after `VALIDATED` or `REJECTED`
-  opens a new request, as for a renewal.)_
+- **Repeat calls [1.4.5]** are matched on `product_specification_id` against the latest request for that product:
+
+  | Latest request for the product | Effect of the call | Response |
+  |---|---|---|
+  | none | New request created | 201 |
+  | `IN_PROGRESS` | **Documents added to that request.** Files identical to one already attached (same SHA-256) are skipped, so a plain retry changes nothing | 200 |
+  | `VALIDATED`, `REJECTED` or `EXPIRED` | **New request** (resubmission after rejection, renewal, or adding a certificate to reach a higher level). The earlier request stays as history; a validated label stays until the new decision | 201 |
+
+  Retries and bulk resends are therefore safe. Documents with the same filename are kept separately and shown with
+  their upload time. (Before 1.4.5, every call created a new request.)
 
 ## 5. Responses
 
 | Status | When | Body |
 |---|---|---|
-| **201 Created** | Request created | `{"statusCode": 201, "message": null, "data": null}` (JSON) |
+| **201 Created** | New request created | `{"statusCode": 201, "message": null, "data": null}` (JSON) |
+| **200 OK** | **[1.4.5]** Request already in progress: documents added | `{"statusCode": 200, "message": "Added to the request in progress: N document(s) added, M identical skipped", "data": null}` (JSON) |
 | **400 Bad Request** | **[1.4.5]** A required part is missing | `{"statusCode": 400, "message": "Missing required part: <part>", "data": null}` (JSON) |
 | **401 Unauthorized** | Token missing, invalid or expired | **Plain text** giving the reason, e.g. `M2M token missing or invalid`, `M2M token expired: …`, `M2M token kid not found in JWKS: …`, `M2M token uses unsupported algorithm: …`, `Error fetching JWKS: …` |
 | **500** | Documents could not be stored | `{"statusCode": 500, "message": null, "data": null}` |
 | **500** | Any other error (e.g. not multipart, upload too large) | `{"statusCode": 500, "message": "Unexpected error", "data": null}`, or `"Error interno del servidor"` |
 
-Treat 201 as final. On 401 or 500, fix the cause before retrying; a blind retry can create duplicates once the first
-attempt has actually succeeded (see "Repeat calls").
+Treat 200 and 201 as success. On 401 or 500, fix the cause before retrying. From 1.4.5 retries are safe (see "Repeat
+calls"); on earlier versions a retry after a success creates a duplicate request.
 
 ## 6. Example
 
@@ -128,7 +134,8 @@ curl -X POST "https://dome-certification-api.dome-marketplace-sbx.org/api/v1/pro
 ## 7. What happens after a 201
 
 - The request appears to certifiers as `IN_PROGRESS`, and an email ("Compliance of <service_name> <service_version>
-  created") goes to `organization_email`. If the email fails, the request is still created.
+  created") goes to `organization_email`. If the email fails, the request is still created. No email is sent when
+  documents are added to a request already in progress (200).
 - The certifier classifies each document (certificate or self-attestation), and the tool derives the label level
   (Baseline / Professional / Professional+).
 - On validation, the tool asks the DOME Issuer for a `gx:LabelCredential`. The Issuer delivers it to the Marketplace at
@@ -141,5 +148,6 @@ curl -X POST "https://dome-certification-api.dome-marketplace-sbx.org/api/v1/pro
 
 | Version | Date | Changes |
 |---|---|---|
+| 2.1 | 2026-10-30 | **[1.4.5]** Repeat calls: documents added to the request in progress (200), identical files skipped; a new request only after a decision. Upload time shown per document |
 | 2.0 | 2026-10-30 | Rewritten against the code. **[1.4.5]**: `files` optional; `requested_compliance_level` variants accepted; missing part → 400 (was 500); one log line per intake call, rejections logged at WARN; uploaded files stored under unique names (identically named documents from different providers no longer overwrite each other); label credential `gx:digestSRI` in SRI form and `gx:validatedCriteria` as `https://w3id.org/gaia-x/specs/cd25.03/criterion/…`. Corrections to v1: endpoint host (`dome-certification-api.…`), ES256-only tokens (the v1 example showed RS256), the format validations v1 listed don't exist, 401 is plain text, levels are not "Baseline only", and `product_specification_id` uniqueness is not enforced |
 | 1.0 | 2025-09 | First version |

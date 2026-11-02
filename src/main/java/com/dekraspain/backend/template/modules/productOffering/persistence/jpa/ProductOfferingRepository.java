@@ -24,6 +24,11 @@ public interface ProductOfferingRepository
   List<Long> findExpiredProductOfferingIds();
 
   @Query(
+    "SELECT po FROM ProductOfferingEntity po WHERE po.id_PO = :idPo ORDER BY po.request_date DESC"
+  )
+  List<ProductOfferingEntity> findByIdPoNewestFirst(@Param("idPo") String idPo);
+
+  @Query(
     "SELECT po.id FROM ProductOfferingEntity po WHERE po.status != 'EXPIRED' AND po.isExpirationWarningEmailSent = false AND po.expiration_date > :twoMonthsAgoDate"
   )
   List<Long> findProductOfferingIdsExpiringBefore(

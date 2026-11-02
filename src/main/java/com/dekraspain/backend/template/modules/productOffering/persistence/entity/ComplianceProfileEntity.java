@@ -7,6 +7,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.util.Date;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -30,6 +31,10 @@ public class ComplianceProfileEntity {
 
   private String url;
   private String hash;
+
+  // When the document was received. Lets certifiers tell apart same-named documents
+  // (e.g. an original and a corrected self-attestation) on one request. Null for older rows.
+  private Date uploadedAt;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "product_offering_id")

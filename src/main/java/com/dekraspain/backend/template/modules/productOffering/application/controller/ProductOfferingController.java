@@ -119,6 +119,7 @@ public class ProductOfferingController {
           .fileName(cp.getFileName())
           .url(cp.getUrl())
           .hash(cp.getHash())
+          .uploadedAt(cp.getUploadedAt())
           .build()
       )
       .collect(Collectors.toList());
@@ -357,7 +358,20 @@ public class ProductOfferingController {
         .requested_compliances_level(compliancesLevel)
         .build();
 
-      productService.createProductOfferingM2M(request, files);
+      ProductOfferingService.IntakeResult result = productService.createProductOfferingM2M(request, files);
+
+      if (!result.created()) {
+        return ResponseEntity
+          .status(HttpStatus.OK)
+          .body(
+            new ApiResponse<>(
+              HttpStatus.OK.value(),
+              "Added to the request in progress: " + result.filesAdded() + " document(s) added, " +
+              result.filesSkipped() + " identical skipped",
+              null
+            )
+          );
+      }
 
       String emailSubject =
       "Compliance of " + serviceName + " " + serviceVersion + " created";
