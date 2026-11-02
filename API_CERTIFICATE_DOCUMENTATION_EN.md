@@ -1,207 +1,145 @@
-# API Endpoint Documentation: /api/v1/product-offering/certificate
+# API: `POST /api/v1/product-offering/certificate`
 
-## Overview
+Certification intake from the DOME Marketplace (machine-to-machine).
 
-This endpoint allows automated product certification creation through Machine-to-Machine (M2M) communication. It is used to request compliance certifications for digital products or services.
+| | |
+|---|---|
+| Document version | 2.0, 2026-10-30. Replaces the September 2025 version |
+| Applies to | certification backend **1.4.5** and later (the changes are marked **[1.4.5]**) |
+| Audience | DOME Marketplace (FICODES) and anyone integrating with the certification tool |
 
-## Endpoint URL
+## 1. Purpose and flow
+
+The certification tool **does not fetch offerings from the Marketplace**. The Marketplace must call this endpoint for
+every product offering that needs certification. Without this call the offering never reaches the certifiers.
 
 ```
-POST /api/v1/product-offering/certificate
+Marketplace ──POST /certificate──▶ Certification tool: request created (IN_PROGRESS), email to the provider
+                                        │
+                                        ▼  certifier reviews the documents and decides
+                        VALIDATED ──▶ email to the provider; Issuer issues a gx:LabelCredential (JWT) ──▶ Marketplace
+                                        (delivered to {marketplace}/admin/uploadcertificate/{product spec URN},
+                                         stored on the product specification as the Compliance:VC characteristic)
+                        REJECTED  ──▶ email to the provider
 ```
 
-## Authentication
+Request states: `IN_PROGRESS` → `VALIDATED` or `REJECTED` (with the certifier's comments). A validated request becomes
+`EXPIRED` when its validity ends. The provider is emailed two months before expiry and again at expiry.
 
-**Authentication Type:** Bearer Token (M2M)
+**When to call:** the event that triggers the call is decided by the Marketplace. The tool accepts it at any point. The
+certification gate sits on **offer publication**, so the call must happen no later than when an offer is created or
+launched for the product specification.
+
+## 2. Endpoints per environment
+
+| Environment | Endpoint |
+|---|---|
+| SBX | `https://dome-certification-api.dome-marketplace-sbx.org/api/v1/product-offering/certificate` |
+| DEV2 | `https://dome-certification-api.dome-marketplace-dev2.org/api/v1/product-offering/certificate` |
+| PRD | `https://dome-certification-api.dome-marketplace.eu/api/v1/product-offering/certificate` |
+
+## 3. Authentication
 
 ```
 Authorization: Bearer <m2m_token>
 ```
 
-- **Description:** The endpoint accepts Machine-to-Machine (M2M) tokens issued by the DOME Marketplace verifier
-- **Authorized issuer:** `verifier.dome-marketplace`
-- **Validation:** The token is automatically validated by the M2M filter before processing the request
+The token is a JWT issued by **that environment's DOME verifier**. The tool checks:
 
-## Request Structure
+| Check | Requirement |
+|---|---|
+| Algorithm | `alg` must be an ECDSA algorithm (`ES256` …). **RS256 tokens are rejected** |
+| Key | the header `kid` must be present in the verifier's JWKS at `{verifier}/oidc/jwks` (keys cached 5 minutes) |
+| Signature | valid for that key |
+| Expiry | `exp` not passed |
 
-### Content-Type
+Verifier JWKS per environment (the PRD value was confirmed 2026-10-30; the others are the environment defaults):
 
-```
-Content-Type: multipart/form-data
-```
+| Environment | JWKS |
+|---|---|
+| SBX | `https://verifier.dome-marketplace-sbx.org/oidc/jwks` |
+| DEV2 | `https://verifier.dome-marketplace-dev2.org/oidc/jwks` |
+| PRD | `https://verifier.dome-marketplace.eu/oidc/jwks` |
 
-### Required Parameters
+The tool does **not** currently check the `iss` or `aud` claims.
 
-All fields are sent as `@RequestPart` in multipart format:
+## 4. Request
 
-| Field                        | Type                      | Required | Description                                           |
-| ---------------------------- | ------------------------- | -------- | ----------------------------------------------------- |
-| `product_specification_id`   | String                    | ✓        | Unique identifier for the product specification       |
-| `service_name`               | String                    | ✓        | Name of the service to be certified                   |
-| `service_version`            | String                    | ✓        | Service version                                       |
-| `organization_name`          | String                    | ✓        | Name of the requesting organization                   |
-| `organization_address`       | String                    | ✓        | Complete address of the organization                  |
-| `organization_country`       | String                    | ✓        | ISO country code (format: XX)                         |
-| `organization_email`         | String                    | ✓        | Organization contact email (valid format)             |
-| `organization_url`           | String                    | ✓        | Organization website/URL                              |
-| `organization_vat_id`        | String                    | ✓        | Tax identification number (VAT ID)                    |
-| `requested_compliance_level` | String                    | ✓        | Requested compliance level (only accepts: "Baseline") |
-| `files`                      | List&lt;MultipartFile&gt; | ✓        | Compliance documentation files                        |
+`Content-Type: multipart/form-data`. Every text field is a multipart part.
 
-### Field Validations
+| Part | Required | Description |
+|---|---|---|
+| `product_specification_id` | yes | Product specification ID. Sent with or without the `urn:ngsi-ld:product-specification:` prefix; the tool stores it without |
+| `service_name` | yes | Service name shown to certifiers and in emails |
+| `service_version` | yes | Service version |
+| `organization_name` | yes | Provider organisation name |
+| `organization_address` | yes | Provider address |
+| `organization_country` | yes | Country (ISO 3166-1 alpha-2 recommended, e.g. `ES`) |
+| `organization_email` | yes | Contact email. Receives the status notifications |
+| `organization_url` | yes | Provider website |
+| `organization_vat_id` | yes | Organisation identifier as used in DOME, e.g. `VATES-B12345678` |
+| `requested_compliance_level` | yes | Level the provider asks for: `Baseline`, `Professional` or `Professional+`. **[1.4.5]** Variants are also accepted (`BL`, `P`, `PP`, `Professional Plus`, any case). Blank or unknown values are treated as `Baseline` and logged. Before 1.4.5, any value other than the three exact strings failed with 500 |
+| `files` | **[1.4.5] no** (was required) | Zero or more compliance documents: the self-attestation and certificates, usually PDF. Repeat the part for several files. A request without documents is accepted and reaches the certifier with no evidence, so the provider will be asked for documents |
 
-- **service_name**: Cannot be empty
-- **service_version**: Cannot be empty
-- **organization_name**: Cannot be empty
-- **organization_address**: Cannot be empty
-- **organization_country**: Valid 2-character ISO code (e.g., "ES", "FR")
-- **organization_email**: Valid email format
-- **organization_url**: Valid URL
-- **organization_vat_id**: Cannot be empty
-- **requested_compliance_level**: Currently only accepts "Baseline"
-- **files**: List of files in multipart format (PDF documents, images, etc.)
+Notes:
+- **Only presence is checked.** The text fields are not validated for format: no email, URL or country checks.
+- **File size:** the maximum size per file and per request is set per deployment (the reference configuration is 10 MB).
+  Larger uploads are rejected with 500.
+- **Integrity:** the tool computes a SHA-256 of each file. That hash goes into the issued label credential
+  (`gx:digestSRI`, format `sha256-<base64>`), so the document a label was based on can be verified later.
+- **Repeat calls:** **each call creates a new certification request.** There is no de-duplication on
+  `product_specification_id` yet, so a retry or a resend produces a duplicate request. Until this changes, send each
+  offering once, and coordinate any bulk resend with the certification team. _(Proposed, not yet implemented: a repeat
+  call for a request still `IN_PROGRESS` adds its documents to that request; a call after `VALIDATED` or `REJECTED`
+  opens a new request, as for a renewal.)_
 
-## Responses
+## 5. Responses
 
-### Success Response (201 Created)
+| Status | When | Body |
+|---|---|---|
+| **201 Created** | Request created | `{"statusCode": 201, "message": null, "data": null}` (JSON) |
+| **400 Bad Request** | **[1.4.5]** A required part is missing | `{"statusCode": 400, "message": "Missing required part: <part>", "data": null}` (JSON) |
+| **401 Unauthorized** | Token missing, invalid or expired | **Plain text** giving the reason, e.g. `M2M token missing or invalid`, `M2M token expired: …`, `M2M token kid not found in JWKS: …`, `M2M token uses unsupported algorithm: …`, `Error fetching JWKS: …` |
+| **500** | Documents could not be stored | `{"statusCode": 500, "message": null, "data": null}` |
+| **500** | Any other error (e.g. not multipart, upload too large) | `{"statusCode": 500, "message": "Unexpected error", "data": null}`, or `"Error interno del servidor"` |
 
-```json
-{
-  "statusCode": 201,
-  "message": null,
-  "data": null
-}
-```
+Treat 201 as final. On 401 or 500, fix the cause before retrying; a blind retry can create duplicates once the first
+attempt has actually succeeded (see "Repeat calls").
 
-### Error Responses
-
-#### Validation Error (400 Bad Request)
-
-```json
-{
-  "statusCode": 400,
-  "message": "Validation error: [field] [error description]",
-  "data": null
-}
-```
-
-#### Authentication Error (401 Unauthorized)
-
-```json
-{
-  "statusCode": 401,
-  "message": "Unauthorized - Invalid M2M token",
-  "data": null
-}
-```
-
-#### File Processing Error (500 Internal Server Error)
-
-```json
-{
-  "statusCode": 500,
-  "message": null,
-  "data": null
-}
-```
-
-#### Internal Server Error (500 Internal Server Error)
-
-```json
-{
-  "statusCode": 500,
-  "message": "Unexpected error",
-  "data": null
-}
-```
-
-## HTTP Status Codes
-
-| Code    | Description                                      |
-| ------- | ------------------------------------------------ |
-| **201** | Created - Certification created successfully     |
-| **400** | Bad Request - Validation error in submitted data |
-| **401** | Unauthorized - Invalid or missing M2M token      |
-| **500** | Internal Server Error - Internal server error    |
-
-## Request Example
-
-### cURL
+## 6. Example
 
 ```bash
-curl -X POST "https://dome-certification.dome-marketplace-sbx.org/api/v1/product-offering/certificate" \
-  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..." \
-  -F "product_specification_id=PROD-2024-001" \
+curl -X POST "https://dome-certification-api.dome-marketplace-sbx.org/api/v1/product-offering/certificate" \
+  -H "Authorization: Bearer <ES256 M2M token from the SBX verifier>" \
+  -F "product_specification_id=urn:ngsi-ld:product-specification:7436c6e6-5d98-491d-b160-fed5bc9aeb49" \
   -F "service_name=Payment Gateway API" \
   -F "service_version=2.1" \
   -F "organization_name=TechCorp Solutions" \
   -F "organization_address=Calle Mayor 123, 28001 Madrid" \
   -F "organization_country=ES" \
-  -F "organization_email=compliance@techcorp.com" \
-  -F "organization_url=https://www.techcorp.com" \
-  -F "organization_vat_id=ESA12345678" \
+  -F "organization_email=compliance@techcorp.example" \
+  -F "organization_url=https://www.techcorp.example" \
+  -F "organization_vat_id=VATES-A12345678" \
   -F "requested_compliance_level=Baseline" \
-  -F "files=@compliance_document.pdf" \
-  -F "files=@technical_specification.pdf"
+  -F "files=@self-attestation.pdf" \
+  -F "files=@iso27001-certificate.pdf"
 ```
 
-### JavaScript (Fetch)
+## 7. What happens after a 201
 
-```javascript
-const formData = new FormData();
-formData.append("product_specification_id", "PROD-2024-001");
-formData.append("service_name", "Payment Gateway API");
-formData.append("service_version", "2.1");
-formData.append("organization_name", "TechCorp Solutions");
-formData.append("organization_address", "Calle Mayor 123, 28001 Madrid");
-formData.append("organization_country", "ES");
-formData.append("organization_email", "compliance@techcorp.com");
-formData.append("organization_url", "https://www.techcorp.com");
-formData.append("organization_vat_id", "ESA12345678");
-formData.append("requested_compliance_level", "Baseline");
-formData.append("files", fileInput1.files[0]);
-formData.append("files", fileInput2.files[0]);
+- The request appears to certifiers as `IN_PROGRESS`, and an email ("Compliance of <service_name> <service_version>
+  created") goes to `organization_email`. If the email fails, the request is still created.
+- The certifier classifies each document (certificate or self-attestation), and the tool derives the label level
+  (Baseline / Professional / Professional+).
+- On validation, the tool asks the DOME Issuer for a `gx:LabelCredential`. The Issuer delivers it to the Marketplace at
+  `{marketplace}/admin/uploadcertificate/urn:ngsi-ld:product-specification:{id}`. A new upload **replaces** the
+  previous label.
+- Each intake call is logged with its product ID, and rejected calls are logged with the reason **[1.4.5]**. Give the
+  certification team the product IDs when you need a call investigated.
 
-fetch(
-  "https://dome-certification.dome-marketplace-sbx.org/api/v1/product-offering/certificate",
-  {
-    method: "POST",
-    headers: {
-      Authorization: "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
-    },
-    body: formData,
-  }
-)
-  .then((response) => response.json())
-  .then((data) => console.log(data))
-  .catch((error) => console.error("Error:", error));
-```
+## 8. Change log
 
-## Additional Functionality
-
-### Email Notification
-
-- Once the certification is successfully created, an automatic notification email is sent
-- The email is sent to the address specified in `organization_email`
-- The email subject includes the service name and version
-- The "email-in_progress" template is used to indicate that the certification is in progress
-
-### File Processing
-
-- Submitted files are processed and securely stored
-- Multiple files are supported in a single request
-- Files are associated with the created certification process
-
-### Traceability
-
-- All requests are logged for audit purposes
-- The authentication type used is identified (M2M vs user JWT)
-- Detailed errors are logged to facilitate debugging
-
-## Important Notes
-
-1. **M2M Only**: This endpoint is specifically designed for Machine-to-Machine communication
-2. **Asynchronous**: Certification creation is an asynchronous process; a 201 response indicates it has started successfully
-3. **Required files**: It is mandatory to send at least one documentation file
-4. **Uniqueness**: The `product_specification_id` must be unique per organization and version
-5. **Country format**: The country code must follow the ISO 3166-1 alpha-2 standard
+| Version | Date | Changes |
+|---|---|---|
+| 2.0 | 2026-10-30 | Rewritten against the code. **[1.4.5]**: `files` optional; `requested_compliance_level` variants accepted; missing part → 400 (was 500); one log line per intake call, rejections logged at WARN; uploaded files stored under unique names (identically named documents from different providers no longer overwrite each other); label credential `gx:digestSRI` in SRI form and `gx:validatedCriteria` as `https://w3id.org/gaia-x/specs/cd25.03/criterion/…`. Corrections to v1: endpoint host (`dome-certification-api.…`), ES256-only tokens (the v1 example showed RS256), the format validations v1 listed don't exist, 401 is plain text, levels are not "Baseline only", and `product_specification_id` uniqueness is not enforced |
+| 1.0 | 2025-09 | First version |

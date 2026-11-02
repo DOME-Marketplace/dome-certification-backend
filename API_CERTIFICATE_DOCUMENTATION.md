@@ -1,207 +1,145 @@
-# API Endpoint Documentation: /api/v1/product-offering/certificate
+# API: `POST /api/v1/product-offering/certificate`
 
-## Descripción General
+Alta de solicitudes de certificación desde el DOME Marketplace (máquina a máquina).
 
-Este endpoint permite crear certificaciones de productos de manera automatizada (Machine-to-Machine). Es utilizado para solicitar certificaciones de cumplimiento normativo de productos o servicios digitales.
+| | |
+|---|---|
+| Versión del documento | 2.0, 2026-10-30. Sustituye a la versión de septiembre de 2025 |
+| Aplica a | backend de certificación **1.4.5** y posteriores (los cambios se marcan con **[1.4.5]**) |
+| Destinatarios | DOME Marketplace (FICODES) y cualquier integración con la herramienta de certificación |
 
-## URL del Endpoint
+## 1. Propósito y flujo
+
+La herramienta de certificación **no consulta el Marketplace**. El Marketplace debe llamar a este endpoint para cada
+oferta de producto que necesite certificación. Sin esta llamada, la oferta nunca llega a los certificadores.
 
 ```
-POST /api/v1/product-offering/certificate
+Marketplace ──POST /certificate──▶ Herramienta: solicitud creada (IN_PROGRESS), email al proveedor
+                                        │
+                                        ▼  el certificador revisa los documentos y decide
+                        VALIDATED ──▶ email al proveedor; el Issuer emite una gx:LabelCredential (JWT) ──▶ Marketplace
+                                        (entregada en {marketplace}/admin/uploadcertificate/{URN de la especificación},
+                                         guardada en la especificación como la característica Compliance:VC)
+                        REJECTED  ──▶ email al proveedor
 ```
 
-## Autenticación
+Estados: `IN_PROGRESS` → `VALIDATED` o `REJECTED` (con los comentarios del certificador). Una solicitud validada pasa a
+`EXPIRED` cuando termina su validez. El proveedor recibe un email dos meses antes de la expiración y otro al expirar.
 
-**Tipo de Autenticación:** Bearer Token (M2M)
+**Cuándo llamar:** el evento que dispara la llamada lo decide el Marketplace. La herramienta la acepta en cualquier
+momento. El control de certificación está en la **publicación de la oferta**, así que la llamada debe hacerse, como muy
+tarde, al crear o lanzar una oferta para la especificación de producto.
+
+## 2. Endpoints por entorno
+
+| Entorno | Endpoint |
+|---|---|
+| SBX | `https://dome-certification-api.dome-marketplace-sbx.org/api/v1/product-offering/certificate` |
+| DEV2 | `https://dome-certification-api.dome-marketplace-dev2.org/api/v1/product-offering/certificate` |
+| PRD | `https://dome-certification-api.dome-marketplace.eu/api/v1/product-offering/certificate` |
+
+## 3. Autenticación
 
 ```
 Authorization: Bearer <m2m_token>
 ```
 
-- **Descripción:** El endpoint acepta tokens Machine-to-Machine (M2M) emitidos por el verifier de DOME Marketplace
-- **Emisor autorizado:** `verifier.dome-marketplace`
-- **Validación:** El token es validado automáticamente por el filtro M2M antes de procesar la petición
+El token es un JWT emitido por **el verificador DOME de ese entorno**. La herramienta comprueba:
 
-## Estructura de la Petición
+| Comprobación | Requisito |
+|---|---|
+| Algoritmo | `alg` debe ser ECDSA (`ES256` …). **Los tokens RS256 se rechazan** |
+| Clave | el `kid` de la cabecera debe estar en el JWKS del verificador, `{verifier}/oidc/jwks` (claves en caché 5 minutos) |
+| Firma | válida para esa clave |
+| Expiración | `exp` no vencido |
 
-### Content-Type
+JWKS del verificador por entorno (PRD confirmado el 2026-10-30; los demás son los valores por defecto del entorno):
 
-```
-Content-Type: multipart/form-data
-```
+| Entorno | JWKS |
+|---|---|
+| SBX | `https://verifier.dome-marketplace-sbx.org/oidc/jwks` |
+| DEV2 | `https://verifier.dome-marketplace-dev2.org/oidc/jwks` |
+| PRD | `https://verifier.dome-marketplace.eu/oidc/jwks` |
 
-### Parámetros Requeridos
+Actualmente la herramienta **no** comprueba los claims `iss` ni `aud`.
 
-Todos los campos son enviados como `@RequestPart` en formato multipart:
+## 4. Petición
 
-| Campo                        | Tipo                      | Obligatorio | Descripción                                                |
-| ---------------------------- | ------------------------- | ----------- | ---------------------------------------------------------- |
-| `product_specification_id`   | String                    | ✓           | Identificador único de la especificación del producto      |
-| `service_name`               | String                    | ✓           | Nombre del servicio a certificar                           |
-| `service_version`            | String                    | ✓           | Versión del servicio                                       |
-| `organization_name`          | String                    | ✓           | Nombre de la organización solicitante                      |
-| `organization_address`       | String                    | ✓           | Dirección completa de la organización                      |
-| `organization_country`       | String                    | ✓           | Código ISO de país (formato: XX)                           |
-| `organization_email`         | String                    | ✓           | Email de contacto de la organización (formato válido)      |
-| `organization_url`           | String                    | ✓           | URL/sitio web de la organización                           |
-| `organization_vat_id`        | String                    | ✓           | Número de identificación fiscal (VAT ID)                   |
-| `requested_compliance_level` | String                    | ✓           | Nivel de cumplimiento solicitado (solo acepta: "Baseline") |
-| `files`                      | List&lt;MultipartFile&gt; | ✓           | Archivos de documentación de cumplimiento                  |
+`Content-Type: multipart/form-data`. Cada campo de texto es una parte multipart.
 
-### Validaciones de Campos
+| Parte | Obligatoria | Descripción |
+|---|---|---|
+| `product_specification_id` | sí | ID de la especificación de producto. Se acepta con o sin el prefijo `urn:ngsi-ld:product-specification:`; la herramienta lo guarda sin él |
+| `service_name` | sí | Nombre del servicio, visible para los certificadores y en los emails |
+| `service_version` | sí | Versión del servicio |
+| `organization_name` | sí | Nombre de la organización proveedora |
+| `organization_address` | sí | Dirección del proveedor |
+| `organization_country` | sí | País (se recomienda ISO 3166-1 alfa-2, p. ej. `ES`) |
+| `organization_email` | sí | Email de contacto. Recibe las notificaciones de estado |
+| `organization_url` | sí | Web del proveedor |
+| `organization_vat_id` | sí | Identificador de la organización tal como se usa en DOME, p. ej. `VATES-B12345678` |
+| `requested_compliance_level` | sí | Nivel que solicita el proveedor: `Baseline`, `Professional` o `Professional+`. **[1.4.5]** También se aceptan variantes (`BL`, `P`, `PP`, `Professional Plus`, sin distinguir mayúsculas). Un valor vacío o desconocido se trata como `Baseline` y se registra en el log. Antes de 1.4.5, cualquier valor distinto de los tres exactos daba error 500 |
+| `files` | **[1.4.5] no** (antes obligatoria) | Cero o más documentos de cumplimiento: la autodeclaración y los certificados, normalmente PDF. Repetir la parte para varios ficheros. Una petición sin documentos se acepta y llega al certificador sin evidencias, así que se pedirán documentos al proveedor |
 
-- **service_name**: No puede estar vacío
-- **service_version**: No puede estar vacío
-- **organization_name**: No puede estar vacío
-- **organization_address**: No puede estar vacío
-- **organization_country**: Código ISO válido de 2 caracteres (ej: "ES", "FR")
-- **organization_email**: Formato de email válido
-- **organization_url**: URL válida
-- **organization_vat_id**: No puede estar vacío
-- **requested_compliance_level**: Por el momento solo aceptamos "Baseline"
-- **files**: Lista de archivos en formato multipart (documentos PDF, imágenes, etc.)
+Notas:
+- **Solo se comprueba la presencia.** No se valida el formato de los campos de texto: ni email, ni URL, ni país.
+- **Tamaño de ficheros:** el máximo por fichero y por petición se configura en cada despliegue (la configuración de
+  referencia es 10 MB). Las subidas mayores se rechazan con 500.
+- **Integridad:** la herramienta calcula un SHA-256 de cada fichero. Ese hash va en la credencial emitida
+  (`gx:digestSRI`, formato `sha256-<base64>`), así que se puede verificar después en qué documento se basó la etiqueta.
+- **Llamadas repetidas:** **cada llamada crea una nueva solicitud de certificación.** Todavía no hay deduplicación por
+  `product_specification_id`, así que un reintento o un reenvío genera una solicitud duplicada. Mientras no cambie,
+  enviad cada oferta una sola vez y coordinad cualquier reenvío masivo con el equipo de certificación. _(Propuesto, aún
+  no implementado: una llamada repetida para una solicitud aún `IN_PROGRESS` añade sus documentos a esa solicitud; una
+  llamada tras `VALIDATED` o `REJECTED` abre una nueva solicitud, como en una renovación.)_
 
-## Respuestas
+## 5. Respuestas
 
-### Respuesta Exitosa (201 Created)
+| Estado | Cuándo | Cuerpo |
+|---|---|---|
+| **201 Created** | Solicitud creada | `{"statusCode": 201, "message": null, "data": null}` (JSON) |
+| **400 Bad Request** | **[1.4.5]** Falta una parte obligatoria | `{"statusCode": 400, "message": "Missing required part: <parte>", "data": null}` (JSON) |
+| **401 Unauthorized** | Token ausente, inválido o caducado | **Texto plano** con el motivo, p. ej. `M2M token missing or invalid`, `M2M token expired: …`, `M2M token kid not found in JWKS: …`, `M2M token uses unsupported algorithm: …`, `Error fetching JWKS: …` |
+| **500** | No se pudieron guardar los documentos | `{"statusCode": 500, "message": null, "data": null}` |
+| **500** | Cualquier otro error (p. ej. no es multipart, subida demasiado grande) | `{"statusCode": 500, "message": "Unexpected error", "data": null}`, o `"Error interno del servidor"` |
 
-```json
-{
-  "statusCode": 201,
-  "message": null,
-  "data": null
-}
-```
+Considerad 201 como definitivo. Ante un 401 o 500, corregid la causa antes de reintentar; un reintento a ciegas puede
+duplicar la solicitud si el primer intento sí se completó (ver "Llamadas repetidas").
 
-### Respuestas de Error
-
-#### Error de Validación (400 Bad Request)
-
-```json
-{
-  "statusCode": 400,
-  "message": "Validation error: [campo] [descripción del error]",
-  "data": null
-}
-```
-
-#### Error de Autenticación (401 Unauthorized)
-
-```json
-{
-  "statusCode": 401,
-  "message": "Unauthorized - Invalid M2M token",
-  "data": null
-}
-```
-
-#### Error de Procesamiento de Archivos (500 Internal Server Error)
-
-```json
-{
-  "statusCode": 500,
-  "message": null,
-  "data": null
-}
-```
-
-#### Error Interno del Servidor (500 Internal Server Error)
-
-```json
-{
-  "statusCode": 500,
-  "message": "Unexpected error",
-  "data": null
-}
-```
-
-## Códigos de Estado HTTP
-
-| Código  | Descripción                                             |
-| ------- | ------------------------------------------------------- |
-| **201** | Created - Certificación creada exitosamente             |
-| **400** | Bad Request - Error de validación en los datos enviados |
-| **401** | Unauthorized - Token M2M inválido o ausente             |
-| **500** | Internal Server Error - Error interno del servidor      |
-
-## Ejemplo de Petición
-
-### cURL
+## 6. Ejemplo
 
 ```bash
-curl -X POST "https://dome-certification.dome-marketplace-sbx.org/api/v1/product-offering/certificate" \
-  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..." \
-  -F "product_specification_id=PROD-2024-001" \
+curl -X POST "https://dome-certification-api.dome-marketplace-sbx.org/api/v1/product-offering/certificate" \
+  -H "Authorization: Bearer <token M2M ES256 del verificador SBX>" \
+  -F "product_specification_id=urn:ngsi-ld:product-specification:7436c6e6-5d98-491d-b160-fed5bc9aeb49" \
   -F "service_name=Payment Gateway API" \
   -F "service_version=2.1" \
   -F "organization_name=TechCorp Solutions" \
   -F "organization_address=Calle Mayor 123, 28001 Madrid" \
   -F "organization_country=ES" \
-  -F "organization_email=compliance@techcorp.com" \
-  -F "organization_url=https://www.techcorp.com" \
-  -F "organization_vat_id=ESA12345678" \
+  -F "organization_email=compliance@techcorp.example" \
+  -F "organization_url=https://www.techcorp.example" \
+  -F "organization_vat_id=VATES-A12345678" \
   -F "requested_compliance_level=Baseline" \
-  -F "files=@compliance_document.pdf" \
-  -F "files=@technical_specification.pdf"
+  -F "files=@autodeclaracion.pdf" \
+  -F "files=@certificado-iso27001.pdf"
 ```
 
-### JavaScript (Fetch)
+## 7. Qué ocurre tras un 201
 
-```javascript
-const formData = new FormData();
-formData.append("product_specification_id", "PROD-2024-001");
-formData.append("service_name", "Payment Gateway API");
-formData.append("service_version", "2.1");
-formData.append("organization_name", "TechCorp Solutions");
-formData.append("organization_address", "Calle Mayor 123, 28001 Madrid");
-formData.append("organization_country", "ES");
-formData.append("organization_email", "compliance@techcorp.com");
-formData.append("organization_url", "https://www.techcorp.com");
-formData.append("organization_vat_id", "ESA12345678");
-formData.append("requested_compliance_level", "Baseline");
-formData.append("files", fileInput1.files[0]);
-formData.append("files", fileInput2.files[0]);
+- La solicitud aparece para los certificadores como `IN_PROGRESS`, y se envía un email ("Compliance of <service_name>
+  <service_version> created") a `organization_email`. Si el email falla, la solicitud se crea igualmente.
+- El certificador clasifica cada documento (certificado o autodeclaración) y la herramienta deriva el nivel de la
+  etiqueta (Baseline / Professional / Professional+).
+- Al validar, la herramienta pide al DOME Issuer una `gx:LabelCredential`. El Issuer la entrega al Marketplace en
+  `{marketplace}/admin/uploadcertificate/urn:ngsi-ld:product-specification:{id}`. Una nueva subida **sustituye** a la
+  etiqueta anterior.
+- Cada llamada se registra en el log con su ID de producto, y las rechazadas con el motivo **[1.4.5]**. Si necesitáis
+  investigar una llamada, pasad los IDs de producto al equipo de certificación.
 
-fetch(
-  "https://dome-certification.dome-marketplace-sbx.org/api/v1/product-offering/certificate",
-  {
-    method: "POST",
-    headers: {
-      Authorization: "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
-    },
-    body: formData,
-  }
-)
-  .then((response) => response.json())
-  .then((data) => console.log(data))
-  .catch((error) => console.error("Error:", error));
-```
+## 8. Historial de cambios
 
-## Funcionalidad Adicional
-
-### Notificación por Email
-
-- Una vez creada la certificación exitosamente, se envía automáticamente un email de notificación
-- El email se envía a la dirección especificada en `organization_email`
-- El asunto del email incluye el nombre y versión del servicio
-- Se utiliza la plantilla "email-in_progress" para indicar que la certificación está en proceso
-
-### Procesamiento de Archivos
-
-- Los archivos enviados son procesados y almacenados de forma segura
-- Se admiten múltiples archivos en una sola petición
-- Los archivos son asociados al proceso de certificación creado
-
-### Trazabilidad
-
-- Todas las peticiones son registradas en logs para auditoría
-- Se identifica el tipo de autenticación utilizada (M2M vs JWT de usuario)
-- Se registran errores detallados para facilitar el debugging
-
-## Notas Importantes
-
-1. **Solo M2M**: Este endpoint está diseñado específicamente para comunicación Machine-to-Machine
-2. **Asíncrono**: La creación de la certificación es un proceso asíncrono; la respuesta 201 indica que se ha iniciado correctamente
-3. **Archivos requeridos**: Es obligatorio enviar al menos un archivo de documentación
-4. **Unicidad**: El `product_specification_id` debe ser único por organización y version
-5. **Formato de país**: El código de país debe seguir el estándar ISO 3166-1 alpha-2
+| Versión | Fecha | Cambios |
+|---|---|---|
+| 2.0 | 2026-10-30 | Reescrito según el código. **[1.4.5]**: `files` opcional; variantes de `requested_compliance_level` aceptadas; parte ausente → 400 (antes 500); una línea de log por llamada, rechazos registrados como WARN; ficheros guardados con nombre único (los documentos con el mismo nombre de distintos proveedores ya no se sobrescriben); en la credencial, `gx:digestSRI` en formato SRI y `gx:validatedCriteria` como `https://w3id.org/gaia-x/specs/cd25.03/criterion/…`. Correcciones respecto a v1: host del endpoint (`dome-certification-api.…`), solo tokens ES256 (el ejemplo de v1 usaba RS256), las validaciones de formato que listaba v1 no existen, el 401 es texto plano, los niveles no son "solo Baseline" y no se exige unicidad de `product_specification_id` |
+| 1.0 | 2025-09 | Primera versión |
