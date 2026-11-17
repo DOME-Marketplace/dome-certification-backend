@@ -79,10 +79,10 @@ public class LabelCredentialService {
             compliantCredentials.add(LabelCredentialPayloadDTO.CompliantCredential.builder()
                     .id("urn:criteria:" + criteria.getCode().toLowerCase())
                     .type(mapCategoryToType(criteria.getCategory()))
-                    .gxDigestSRI(profile.getHash())
+                    .gxDigestSRI(toDigestSri(profile.getHash()))
                     .build());
             if (criteria.getLink() != null && !criteria.getLink().isEmpty()) {
-                validatedCriteria.add(criteria.getLink());
+                validatedCriteria.add(toCriterionUri(criteria.getLink(), criteria.getRulesVersion()));
             }
         });
 
@@ -106,6 +106,26 @@ public class LabelCredentialService {
                 .validUntil(validUntil)
                 .credentialSubject(credentialSubject)
                 .build();
+    }
+
+    // Gaia-X criterion URI in the form the DOME label credentials already live in PRD use
+    // (https://w3id.org/gaia-x/specs/cd25.03/criterion/P2.1.1). The seeded link points at the
+    // human-readable docs page, whose #anchor is the criterion id. Links without an anchor pass through.
+    static String toCriterionUri(String link, String rulesVersion) {
+        if (link == null) return null;
+        int anchor = link.lastIndexOf('#');
+        if (anchor < 0 || anchor == link.length() - 1) return link;
+        String version = (rulesVersion == null || rulesVersion.isBlank()) ? "CD25.03" : rulesVersion;
+        return "https://w3id.org/gaia-x/specs/" + version.toLowerCase(Locale.ROOT)
+                + "/criterion/" + link.substring(anchor + 1);
+    }
+
+    // compliance_profile.hash holds the hex SHA-256 of the uploaded file; gx:digestSRI uses the
+    // Subresource Integrity form "sha256-<base64>". Values already in SRI form, or not a hex
+    // SHA-256, pass through unchanged.
+    static String toDigestSri(String hash) {
+        if (hash == null || hash.startsWith("sha256-") || !hash.matches("[0-9a-fA-F]{64}")) return hash;
+        return "sha256-" + Base64.getEncoder().encodeToString(HexFormat.of().parseHex(hash));
     }
 
     private String mapCategoryToType(String category) {

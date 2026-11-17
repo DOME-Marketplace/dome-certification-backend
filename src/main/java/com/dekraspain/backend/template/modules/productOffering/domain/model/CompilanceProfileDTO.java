@@ -1,5 +1,6 @@
 package com.dekraspain.backend.template.modules.productOffering.domain.model;
 
+import java.util.Date;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,4 +16,5 @@ public class CompilanceProfileDTO {
   private String fileName;
   private String url;
   private String hash;
+  private Date uploadedAt;
 }

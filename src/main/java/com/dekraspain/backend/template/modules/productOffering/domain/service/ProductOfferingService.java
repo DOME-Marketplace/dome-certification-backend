@@ -23,7 +23,9 @@ import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -88,41 +90,48 @@ public class ProductOfferingService {
 
     productOfferingRepository.save(productOffering);
 
-    Path uploadPath = Paths.get(uploadDir);
-    if (!Files.exists(uploadPath)) {
-      Files.createDirectories(uploadPath);
-    }
-
-    for (MultipartFile file : files) {
-      String fileHash = calculateFileHash(file);
-      // Guardar el archivo en el almacenamiento de Spring Boot
-      String fileName = StringUtils.cleanPath(file.getOriginalFilename());
-      Path staticFilePath = uploadPath.resolve(fileName);
-      Files.copy(
-        file.getInputStream(),
-        staticFilePath,
-        StandardCopyOption.REPLACE_EXISTING
-      );
-
-      String fileDownloadUri = uploadDir + "/" + fileName;
-      // Crear una nueva instancia de ComplianceProfileEntity para almacenar el archivo
-      ComplianceProfileEntity complianceProfile = ComplianceProfileEntity
-        .builder()
-        .fileName(fileName)
-        .productOffering(productOffering)
-        .url(fileDownloadUri)
-        .hash(fileHash)
-        .build();
-
-      // Guardar el ComplianceProfileEntity en la base de datos
-      complianceProfileRepository.save(complianceProfile);
-    }
+    storeComplianceFiles(productOffering, files, new HashSet<>());
   }
-  public void createProductOfferingM2M(
+  // Outcome of a Marketplace intake call: either a new certification request was created, or the
+  // documents were added to the request already in progress for the same product specification.
+  public record IntakeResult(
+    ProductOfferingEntity productOffering,
+    boolean created,
+    int filesAdded,
+    int filesSkipped
+  ) {}
+
+  // Repeat calls for the same product specification don't create duplicate requests: while the
+  // latest request is still IN_PROGRESS, new documents are added to it (identical files, by hash,
+  // are skipped, so a plain retry is a no-op). After VALIDATED, REJECTED or EXPIRED a call opens a
+  // new request, so a resubmission after rejection or a renewal is a fresh decision and the
+  // earlier one stays as history.
+  public IntakeResult createProductOfferingM2M(
     ProductOfferingRequest request,
     List<MultipartFile> files
   ) throws IOException {
+    ProductOfferingEntity latest = productOfferingRepository
+      .findByIdPoNewestFirst(request.getId_PO())
+      .stream()
+      .findFirst()
+      .orElse(null);
 
+    if (latest != null && latest.getStatus() == ProductOfferingStates.IN_PROGRESS) {
+      Set<String> knownHashes = complianceProfileRepository
+        .findByProductOfferingId(latest.getId())
+        .stream()
+        .map(ComplianceProfileEntity::getHash)
+        .collect(Collectors.toCollection(HashSet::new));
+      int[] counts = storeComplianceFiles(latest, files, knownHashes);
+      logger.info(
+        "Intake for {} matched in-progress request {}: {} document(s) added, {} identical skipped",
+        request.getId_PO(),
+        latest.getId(),
+        counts[0],
+        counts[1]
+      );
+      return new IntakeResult(latest, false, counts[0], counts[1]);
+    }
 
     ProductOfferingEntity productOffering = ProductOfferingEntity
       .builder()
@@ -143,11 +152,38 @@ public class ProductOfferingService {
       .isExpirationEmailSent(false)
       .isExpirationWarningEmailSent(false)
       .requestedComplianceLevel(
-        new RequestedComplianceLevel(request.getRequested_compliances_level())
+        new RequestedComplianceLevel(
+          RequestedComplianceLevel.normalize(request.getRequested_compliances_level())
+        )
       )
       .build();
 
     productOfferingRepository.save(productOffering);
+
+    int[] counts = storeComplianceFiles(productOffering, files, new HashSet<>());
+    return new IntakeResult(productOffering, true, counts[0], counts[1]);
+  }
+
+  // Stores each uploaded file under a name unique to this product offering. Files used to be
+  // saved under their original name with REPLACE_EXISTING, so two providers uploading the same
+  // template name ("Compliance Self-attestation form_CSP_DOME March 2025.pdf") overwrote each other.
+  // fileName keeps the original name for display; url points at the unique stored file.
+  // Returns {added, skipped}. Files whose hash is already in knownHashes are skipped.
+  private int[] storeComplianceFiles(
+    ProductOfferingEntity productOffering,
+    List<MultipartFile> files,
+    Set<String> knownHashes
+  ) throws IOException {
+    if (files == null || files.isEmpty()) {
+      logger.warn(
+        "Product offering {} ({}) received no compliance documents",
+        productOffering.getId(),
+        productOffering.getId_PO()
+      );
+      return new int[] { 0, 0 };
+    }
+    int added = 0;
+    int skipped = 0;
 
     Path uploadPath = Paths.get(uploadDir);
     if (!Files.exists(uploadPath)) {
@@ -155,29 +191,39 @@ public class ProductOfferingService {
     }
 
     for (MultipartFile file : files) {
+      if (file == null || file.isEmpty()) {
+        continue;
+      }
       String fileHash = calculateFileHash(file);
-      // Guardar el archivo en el almacenamiento de Spring Boot
-      String fileName = StringUtils.cleanPath(file.getOriginalFilename());
-      Path staticFilePath = uploadPath.resolve(fileName);
+      if (!knownHashes.add(fileHash)) {
+        skipped++;
+        continue;
+      }
+      String originalName = file.getOriginalFilename() != null
+        ? Paths.get(StringUtils.cleanPath(file.getOriginalFilename())).getFileName().toString()
+        : "document.pdf";
+      String storedName =
+        productOffering.getId() + "_" + fileHash.substring(0, 12) + "_" + originalName;
+      Path staticFilePath = uploadPath.resolve(storedName);
       Files.copy(
         file.getInputStream(),
         staticFilePath,
         StandardCopyOption.REPLACE_EXISTING
       );
 
-      String fileDownloadUri = uploadDir + "/" + fileName;
-      // Crear una nueva instancia de ComplianceProfileEntity para almacenar el archivo
       ComplianceProfileEntity complianceProfile = ComplianceProfileEntity
         .builder()
-        .fileName(fileName)
+        .fileName(originalName)
         .productOffering(productOffering)
-        .url(fileDownloadUri)
+        .url(uploadDir + "/" + storedName)
         .hash(fileHash)
+        .uploadedAt(new Date())
         .build();
 
-      // Guardar el ComplianceProfileEntity en la base de datos
       complianceProfileRepository.save(complianceProfile);
+      added++;
     }
+    return new int[] { added, skipped };
   }
 
   private String calculateFileHash(MultipartFile file) throws IOException {
@@ -283,6 +329,7 @@ public class ProductOfferingService {
           .fileName(cp.getFileName())
           .url(cp.getUrl())
           .hash(cp.getHash())
+          .uploadedAt(cp.getUploadedAt())
           .build()
       )
       .collect(Collectors.toList());
@@ -433,6 +480,7 @@ public class ProductOfferingService {
                   .fileName(cp.getFileName())
                   .url(cp.getUrl())
                   .hash(cp.getHash())
+                  .uploadedAt(cp.getUploadedAt())
                   .build()
               )
               .collect(Collectors.toList())
@@ -561,6 +609,7 @@ public class ProductOfferingService {
                   .fileName(cp.getFileName())
                   .url(cp.getUrl())
                   .hash(cp.getHash())
+                  .uploadedAt(cp.getUploadedAt())
                   .build()
               )
               .collect(Collectors.toList())
@@ -624,6 +673,7 @@ public class ProductOfferingService {
           .builder()
           .id(complianceProfile.getId())
           .fileName(complianceProfile.getFileName())
+          .uploadedAt(complianceProfile.getUploadedAt())
           .build()
       )
       .collect(Collectors.toList());
