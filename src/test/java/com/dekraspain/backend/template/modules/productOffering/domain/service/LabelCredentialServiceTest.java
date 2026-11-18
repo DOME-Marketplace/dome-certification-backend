@@ -117,6 +117,14 @@ class LabelCredentialServiceTest {
   }
 
   @Test
+  void productSpecUrnIsPrefixedExactlyOnce() {
+    String urn = "urn:ngsi-ld:product-specification:7893acd1-7905-4e6b-a620-bc78a6492afb";
+    assertEquals(urn, LabelCredentialService.toProductSpecUrn("7893acd1-7905-4e6b-a620-bc78a6492afb"));
+    assertEquals(urn, LabelCredentialService.toProductSpecUrn(urn));
+    assertEquals(urn, LabelCredentialService.toProductSpecUrn("urn:ngsi-ld:product-specification:" + urn));
+  }
+
+  @Test
   void digestSriConvertsHexSha256ToSriForm() {
     // SHA-256 of the empty input
     assertEquals(

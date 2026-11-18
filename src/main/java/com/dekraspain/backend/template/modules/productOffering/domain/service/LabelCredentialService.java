@@ -87,7 +87,7 @@ public class LabelCredentialService {
         });
 
         LabelCredentialPayloadDTO.CredentialSubject credentialSubject = LabelCredentialPayloadDTO.CredentialSubject.builder()
-                .id("urn:ngsi-ld:product-specification:" + po.getId_PO())
+                .id(toProductSpecUrn(po.getId_PO()))
                 .gxLabelLevel(effectiveLabelLevel)
                 .gxEngineVersion(appVersion)
                 .gxRulesVersion(rulesVersion[0] != null ? rulesVersion[0] : "CD25.03")
@@ -118,6 +118,18 @@ public class LabelCredentialService {
         String version = (rulesVersion == null || rulesVersion.isBlank()) ? "CD25.03" : rulesVersion;
         return "https://w3id.org/gaia-x/specs/" + version.toLowerCase(Locale.ROOT)
                 + "/criterion/" + link.substring(anchor + 1);
+    }
+
+    // Marketplace product id as a product-specification URN. Requests stored before intake started
+    // stripping the prefix keep the full URN in id_PO, so strip any existing prefix before adding it
+    // once; otherwise the label's subject is double-prefixed.
+    static final String PRODUCT_SPEC_URN_PREFIX = "urn:ngsi-ld:product-specification:";
+
+    static String toProductSpecUrn(String idPo) {
+        if (idPo == null) return null;
+        String id = idPo.trim();
+        while (id.startsWith(PRODUCT_SPEC_URN_PREFIX)) id = id.substring(PRODUCT_SPEC_URN_PREFIX.length());
+        return PRODUCT_SPEC_URN_PREFIX + id;
     }
 
     // compliance_profile.hash holds the hex SHA-256 of the uploaded file; gx:digestSRI uses the
